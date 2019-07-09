@@ -87,6 +87,22 @@
 #include "binary_manager/binary_manager.h"
 #endif
 
+#include <tinyara/irq.h>
+//#include <tinyara/arch.h>
+#include <signal.h>
+#include "../../arch/arm/src/imxrt/imxrt_gpio.h"
+#include "../../arch/arm/src/imxrt/imxrt_iomuxc.h"
+#include "../../arch/arm/include/imxrt/imxrt102x_irq.h"
+#include "../../arch/arm/src/imxrt/chip/imxrt102x_pinmux.h"
+
+#define IOMUX_GOUT      (IOMUX_PULL_NONE | IOMUX_CMOS_OUTPUT | \
+                         IOMUX_DRIVE_40OHM | IOMUX_SPEED_MEDIUM | \
+                         IOMUX_SLEW_SLOW)
+
+#define IOMUX_SW8       (IOMUX_SLEW_FAST | IOMUX_DRIVE_50OHM | \
+		IOMUX_SPEED_MEDIUM | IOMUX_PULL_UP_100K | \
+		_IOMUX_PULL_ENABLE)
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -214,6 +230,52 @@ static inline void os_workqueues(void)
 
 #endif							/* CONFIG_SCHED_WORKQUEUE */
 
+static int gpio_1_21_handler(int irq, FAR void *context, FAR void *arg)
+{
+	kill(8, 1);
+	return 0;
+}
+
+static int gpio_task(int argc, char **argv)
+{
+	int ret;
+	bool val = true;
+	gpio_pinset_t s_set;
+	gpio_pinset_t r_set;
+
+	lldbg("!!! GPIO !!!\n");
+	s_set = GPIO_PIN5 | GPIO_PORT1 | GPIO_OUTPUT | IOMUX_GOUT;
+	ret = imxrt_config_gpio(s_set);//GPIO_1_16 - WRITE
+	if (ret != OK) {
+		lldbg("config fail for port_1_pin_20, write.\n");
+		return -1;
+	}	
+
+
+ 	r_set = GPIO_PIN9 | GPIO_PORT1 | IOMUX_SW8 | GPIO_INTERRUPT | GPIO_INT_RISINGEDGE;//GPIO_INT_FALLINGEDGE;
+	ret = imxrt_config_gpio(r_set);//GPIO_1_21 - READ
+	if (ret != OK) {
+		lldbg("config fail for port_1_pin_21, read.\n");
+		return -1;
+	}
+
+ 	ret = irq_attach(IMXRT_IRQ_GPIO1_21, (xcpt_t)gpio_1_21_handler, (void *)0);
+	if (ret != OK) {
+		lldbg("irq_attach fail.\n");
+		return -1;
+	}
+
+ 	up_enable_irq(IMXRT_IRQ_GPIO1_21);
+
+/*
+	while (1) {
+	 	sleep(1);
+ 		imxrt_gpio_write(w_set, true);
+	}
+*/
+	return 0;
+}
+
 /****************************************************************************
  * Name: os_start_application
  *
@@ -255,6 +317,11 @@ static inline void os_do_appstart(void)
 
 	net_initialize();
 #endif
+
+	pid = kernel_thread("gpio_test", 100, 1024, gpio_task, NULL);
+	if (pid < 0) {
+		sdbg("Failed to start binary manager");
+	}
 
 #if defined(CONFIG_SYSTEM_PREAPP_INIT) && !defined(CONFIG_APP_BINARY_SEPARATION)
 	svdbg("Starting application init task\n");

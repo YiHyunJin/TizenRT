@@ -73,6 +73,22 @@
 #include "sched/sched.h"
 #include "task/task.h"
 
+#include <tinyara/irq.h>
+
+#include <signal.h>
+#include "../../arch/arm/src/imxrt/imxrt_gpio.h"
+#include "../../arch/arm/src/imxrt/imxrt_iomuxc.h"
+#include "../../arch/arm/include/imxrt/imxrt102x_irq.h"
+#include "../../arch/arm/src/imxrt/chip/imxrt102x_pinmux.h"
+
+#define IOMUX_GOUT      (IOMUX_PULL_NONE | IOMUX_CMOS_OUTPUT | \
+                         IOMUX_DRIVE_40OHM | IOMUX_SPEED_MEDIUM | \
+                         IOMUX_SLEW_SLOW)
+
+#define IOMUX_SW8       (IOMUX_SLEW_FAST | IOMUX_DRIVE_50OHM | \
+		IOMUX_SPEED_MEDIUM | IOMUX_PULL_UP_100K | \
+		_IOMUX_PULL_ENABLE)
+
 /************************************************************************
  * Private Functions
  ************************************************************************/
@@ -209,10 +225,9 @@ int prctl(int option, ...)
 	break;
 	case PR_MSG_REMOVE:
 	{
-		int ret;
-		char *port_name = va_arg(ap, char *);
-		ret = messaging_remove_list(port_name);
-		return ret;
+		gpio_pinset_t r_set;
+		r_set = GPIO_PIN5 | GPIO_PORT1 | GPIO_OUTPUT | IOMUX_GOUT;
+		imxrt_gpio_write(r_set, true);
 	}
 	break;
 #else /* CONFIG_MESSAGING_IPC */
@@ -227,14 +242,9 @@ int prctl(int option, ...)
 #endif /* CONFIG_MESSAGING_IPC */
 	case PR_GET_STKLOG:
 	{
-#if defined(CONFIG_ENABLE_STACKMONITOR) && defined(CONFIG_DEBUG)
-		struct stkmon_save_s *dest_buf = va_arg(ap, struct stkmon_save_s *);
-		stkmon_copy_log(dest_buf);
-#else
-		sdbg("Not supported StackMonitor Logging\n");
-		err = ENOSYS;
-		goto errout;
-#endif
+		gpio_pinset_t r_set;
+		r_set = GPIO_PIN5 | GPIO_PORT1 | GPIO_OUTPUT | IOMUX_GOUT;
+		imxrt_gpio_write(r_set, false);
 	}
 	break;
 	default:

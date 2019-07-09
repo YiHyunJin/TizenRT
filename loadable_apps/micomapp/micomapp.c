@@ -20,12 +20,17 @@
  * Included Files
  ****************************************************************************/
 
+
 #include <stdio.h>
+#include <sched.h>
 #include <unistd.h>
-#ifdef CONFIG_BINARY_MANAGER
-#include <binary_manager/binary_manager.h>
-#endif
-#include "micomapp_internal.h"
+
+void gpio_handler(int signo)
+{
+	//write to pin22
+	prctl(PR_GET_STKLOG, NULL);
+}
+
 
 /****************************************************************************
  * Public Functions
@@ -33,34 +38,26 @@
 int main(int argc, char **argv)
 {
 	int ret;
-#ifdef CONFIG_EXAMPLES_MICOM_TIMER_TEST
-	char *timer_args[TIMER_ARG_NUM];
+	struct sigaction act;
+	sigset_t sigset;
+	struct sched_param param;
+	param.sched_priority = 250;
 
-	ret = alloc_timer_args(timer_args);
-	if (ret != OK) {
-		printf("TIMER TEST FAIL : out of memory.\n");
-		return ERROR;
-	}
+	printf("[%d] MICOM ALIVE\n", getpid());
 
-	timer_main(TIMER_ARG_NUM, timer_args);
+	sched_setparam(getpid(), &param);
 
-	free_timer_args(timer_args);
-#else /* CONFIG_EXAMPLES_MICOM_TIMER_TEST */
-#ifdef CONFIG_BINARY_MANAGER
-	ret = binary_manager_notify_binary_started();
-	if (ret < 0) {
-		printf("MICOM notify 'START' state FAIL\n", ret);
-	}
-#endif
+	//register signal handler
+	act.sa_handler = (_sa_handler_t)gpio_handler;
+	act.sa_flags = 0;
 
-#ifdef CONFIG_EXAMPLES_MESSAGING_TEST
-	messaging_test();
-#endif
-#endif /* CONFIG_EXAMPLES_MICOM_TIMER_TEST */
+	sigfillset(&sigset);
+	sigdelset(&sigset, 1);
+	(void)sigprocmask(SIG_SETMASK, &sigset, NULL);
 
 	while (1) {
-		sleep(10);
-		printf("[%d] MICOM ALIVE\n", getpid());
+		prctl(PR_MSG_REMOVE, NULL);
+		usleep(100);
 	}
 
 	return 0;
