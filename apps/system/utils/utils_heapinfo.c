@@ -48,7 +48,7 @@ static char *ptr = CONFIG_HEAPINFO_USER_GROUP_LIST;
 const static char *end_list = CONFIG_HEAPINFO_USER_GROUP_LIST + sizeof(CONFIG_HEAPINFO_USER_GROUP_LIST) - 1;
 #endif
 
-#define HEAPINFO_BUFLEN 64
+#define HEAPINFO_BUFLEN 128
 #define HEAPINFO_DISPLAY_ALL            0
 #define HEAPINFO_DISPLAY_SPECIFIC_HEAP  1
 #define HEAPINFO_DISPLAY_GROUP          2
@@ -89,6 +89,9 @@ static void heapinfo_print_values(char *buf)
 	printf(" | %5s", stat_info[PROC_STAT_PPID]);
 #endif
 	printf(" | %5s | %9s | %9s", stat_info[PROC_STAT_TOTALSTACK], stat_info[PROC_STAT_CURRHEAP], stat_info[PROC_STAT_PEAKHEAP]);
+#ifdef CONFIG_APP_BINARY_SEPARATION
+	printf(" | %8s", stat_info[PROC_STAT_HEAP_NAME]);
+#endif
 #if CONFIG_TASK_NAME_SIZE > 0
 	printf(" | %s(", stat_info[PROC_STAT_NAME]);
 #else
@@ -169,12 +172,19 @@ static void heapinfo_show_taskinfo(void)
 #if defined(CONFIG_SCHED_HAVE_PARENT) && !defined(HAVE_GROUP_MEMBERS)
 	printf("%5s | ", "PPID");
 #endif
-	printf("%5s | %9s | %9s | %s\n", "STACK", "CURR_HEAP", "PEAK_HEAP", "NAME");
-	printf("----|");
+	printf("%5s | %9s | %9s |", "STACK", "CURR_HEAP", "PEAK_HEAP");
+#ifdef CONFIG_APP_BINARY_SEPARATION
+	printf(" %s |", "   BIN  ");
+#endif
+	printf(" %s\n----|", "NAME");
 #if defined(CONFIG_SCHED_HAVE_PARENT) && !defined(HAVE_GROUP_MEMBERS)
 	printf("-------|");
 #endif
-	printf("-------|-----------|-----------|----------\n");
+	printf("-------|-----------|-----------|");
+#ifdef CONFIG_APP_BINARY_SEPARATION
+	printf("----------|");
+#endif
+	printf("----------\n");
 
 	utils_proc_pid_foreach(heapinfo_read_proc);
 
@@ -192,6 +202,7 @@ int utils_heapinfo(int argc, char **args)
 	int opt;
 	int heapinfo_fd;
 	int heapinfo_display_flag = HEAPINFO_DISPLAY_ALL;
+	bool init_flag = false;
 	heapinfo_option_t options;
 	options.heap_type = HEAPINFO_HEAP_TYPE_KERNEL;
 	options.mode = HEAPINFO_SIMPLE;
@@ -204,11 +215,16 @@ int utils_heapinfo(int argc, char **args)
 		goto usage;
 	}
 
-	while ((opt = getopt(argc, args, "kub:ap:fge:r")) != ERROR) {
+	while ((opt = getopt(argc, args, "ikub:ap:fge:r")) != ERROR) {
 #if CONFIG_MM_NHEAPS > 1
 		summary_option = false;
 #endif
 		switch (opt) {
+		/* i : initialize the peak allocated memory size. */
+		case 'i':
+			options.mode = HEAPINFO_INIT_PEAK;
+			init_flag = true;
+			break;
 		/* k, u, b : select the heap type about kernel, user, binary. */
 		case 'k':
 			options.heap_type = HEAPINFO_HEAP_TYPE_KERNEL;
@@ -276,9 +292,11 @@ int utils_heapinfo(int argc, char **args)
 	}
 
 #ifdef CONFIG_BUILD_PROTECTED
-	printf("\n****************************************************************\n");
-	printf("     %s HEAP INFORMATION\n", heap_name);
-	printf("****************************************************************\n");
+	if (init_flag != true) {
+		printf("\n****************************************************************\n");
+		printf("     %s HEAP INFORMATION\n", heap_name);
+		printf("****************************************************************\n");
+	}
 #endif
 	heapinfo_fd = open(HEAPINFO_DRVPATH, O_RDWR);
 	if (heapinfo_fd < 0) {
@@ -291,6 +309,14 @@ int utils_heapinfo(int argc, char **args)
 		return ERROR;		
 	}
 	close(heapinfo_fd);
+
+	if (init_flag == true) {
+#ifdef CONFIG_BUILD_PROTECTED
+		printf("[%s]", heap_name);
+#endif
+		printf("Peak allocated memory size is cleared\n");
+		return OK;
+	}
 
 #if CONFIG_MM_NHEAPS > 1
 	if (summary_option == true) {
@@ -311,12 +337,10 @@ int utils_heapinfo(int argc, char **args)
 	return OK;
 
 usage:
-	printf("\nUsage: heapinfo [-TARGET] [-OPTION] [ARG]\n");
+	printf("\nUsage: heapinfo [-TARGET] [-OPTION]\n");
 	printf("Display information of heap memory\n");
+#ifdef CONFIG_BUILD_PROTECTED
 	printf("\nTargets:\n");
-#ifndef CONFIG_BUILD_PROTECTED
-	printf(" (none)         Initialize the heapinfo\n");
-#else
 	printf(" -k             Kernel Heap\n");
 	printf(" -u             User Heap\n");
 #ifdef CONFIG_APP_BINARY_SEPARATION
@@ -336,5 +360,6 @@ usage:
 #if CONFIG_MM_REGIONS > 1
 	printf(" -r             Show the all region information\n");
 #endif
+	printf(" -i             Initialize the peak allocated size\n");
 	return ERROR;
 }

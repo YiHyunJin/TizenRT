@@ -215,6 +215,7 @@
 #define HEAPINFO_DETAIL_PID 3
 #define HEAPINFO_DETAIL_FREE 4
 #define HEAPINFO_DETAIL_SPECIFIC_HEAP 5
+#define HEAPINFO_INIT_PEAK 6
 #define HEAPINFO_PID_ALL -1
 
 #define HEAPINFO_INIT_INFO -1
@@ -396,6 +397,10 @@ struct mm_heap_s {
 	int mm_nregions;
 #endif
 
+#ifdef CONFIG_APP_BINARY_SEPARATION
+	size_t elf_sections_size;
+#endif
+
 	/* All free nodes are maintained in a doubly linked list.  This
 	 * array provides some hooks into the list at various points to
 	 * speed searches for free nodes.
@@ -414,12 +419,6 @@ struct mm_heap_s {
 extern "C" {
 #else
 #define EXTERN extern
-#endif
-
-#ifdef CONFIG_MM_KERNEL_HEAP
-/* This is the kernel heap */
-
-EXTERN struct mm_heap_s g_kmmheap;
 #endif
 
 #if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_BUILD_KERNEL)
@@ -672,6 +671,10 @@ int kmm_mallinfo(struct mallinfo *info);
 #endif
 #endif							/* CONFIG_CAN_PASS_STRUCTS */
 
+#ifdef CONFIG_MM_KERNEL_HEAP
+struct mm_heap_s *kmm_get_heap(void);
+#endif
+
 /* Functions contained in mm_shrinkchunk.c **********************************/
 
 void mm_shrinkchunk(FAR struct mm_heap_s *heap, FAR struct mm_allocnode_s *node, size_t size);
@@ -713,6 +716,7 @@ void mm_initialize_app_heap(void);
 void mm_add_app_heap_list(struct mm_heap_s *heap, char *app_name);
 void mm_remove_app_heap_list(struct mm_heap_s *heap);
 struct mm_heap_s *mm_get_app_heap_with_name(char *app_name);
+char *mm_get_app_heap_name(void *address);
 #endif
 
 #if CONFIG_MM_NHEAPS > 1

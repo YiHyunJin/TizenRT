@@ -73,6 +73,10 @@
 #include "sched/sched.h"
 #include "task/task.h"
 
+#ifdef CONFIG_TASK_MONITOR
+#include "task_monitor/task_monitor_internal.h"
+#endif
+
 /************************************************************************
  * Private Functions
  ************************************************************************/
@@ -237,6 +241,30 @@ int prctl(int option, ...)
 #endif
 	}
 	break;
+#ifdef CONFIG_TASK_MONITOR
+	case PR_MONITOR_REGISTER:
+	{
+		int interval = va_arg(ap, int);
+		int ret;
+		ret = task_monitor_register_list(getpid(), interval);
+		if (ret < 0) {
+			err = ret;
+			goto errout;
+		}
+	}
+	break;
+	case PR_MONITOR_UPDATE:
+	{
+		struct tcb_s *tcb;
+		tcb = sched_gettcb(getpid());
+		if (tcb == NULL) {
+			sdbg("Fail to update the status in task monitor.\n");
+			goto errout;
+		}
+		tcb->is_active = true;
+	}
+	break;
+#endif
 	default:
 		sdbg("Unrecognized option: %d\n", option);
 		err = EINVAL;

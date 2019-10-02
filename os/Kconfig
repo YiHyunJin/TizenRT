@@ -554,8 +554,17 @@ menu "Database"
 source "$FRAMEWORK_DIR/src/arastorage/Kconfig"
 endmenu
 
+menu "AraUI Framework"
+source "$FRAMEWORK_DIR/src/araui/Kconfig"
+endmenu
+
 menu "Memory Management"
 source mm/Kconfig
+endmenu
+
+menu "Work Queue Support"
+	depends on !DISABLE_SIGNALS
+source wqueue/Kconfig
 endmenu
 
 menu "Power Management"
@@ -605,6 +614,10 @@ endmenu
 
 menu "Binary manager"
 source kernel/binary_manager/Kconfig
+endmenu
+
+menu "Task Monitor"
+source kernel/task_monitor/Kconfig
 endmenu
 
 menu "Task manager"
