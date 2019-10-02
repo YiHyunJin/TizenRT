@@ -56,6 +56,7 @@
 #include <tinyara/config.h>
 
 #include <sys/types.h>
+#include <sys/prctl.h>
 #include <sys/ioctl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -105,12 +106,20 @@ struct timer_args {
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+int count;
+void handler(int signo)
+{
+	count--;
+	prctl(TC_GPIO_PIN20_FALSE, NULL);
+	//binary_manager_recovery(9);
+}
 
 static pthread_addr_t timer_thread(pthread_addr_t arg)
 {
 	struct timer_args *pargs = (struct timer_args *)arg;
 	struct timer_notify_s notify;
-	int count = pargs->count;
+	int ret;
+	count = pargs->count;
 	int intval = pargs->intval;
 	int fd = pargs->fd;
 #ifdef CONFIG_EXAMPLES_TIMER_FRT_MEASUREMENT
@@ -123,11 +132,22 @@ static pthread_addr_t timer_thread(pthread_addr_t arg)
 	uint32_t expected_time;
 #endif
 
-	sigset_t sig_set;
-	sigemptyset(&sig_set);
-	sigaddset(&sig_set, EXAMPLE_TIMER_SIGNO);
 
-	pthread_sigmask(SIG_BLOCK, &sig_set, NULL);
+	// sigset_t sig_set;
+	// sigemptyset(&sig_set);
+	// sigaddset(&sig_set, EXAMPLE_TIMER_SIGNO);
+
+	// pthread_sigmask(SIG_BLOCK, &sig_set, NULL);
+
+	struct sigaction act;
+	//register signal handler
+	act.sa_handler = (_sa_handler_t)handler;
+	act.sa_flags = 0;
+	ret = sigaction(EXAMPLE_TIMER_SIGNO, &act, NULL);
+	if (ret == (int)SIG_ERR) {
+		printf("sigaction Failed\n");
+		return;
+	}
 
 	/*
 	 * Register a callback for notifications using the configured signal.
@@ -193,8 +213,10 @@ static pthread_addr_t timer_thread(pthread_addr_t arg)
 	}
 
 #endif
-	while (count--) {
-		sigwaitinfo(&sig_set, NULL);
+	while (count > 0) {
+		//sigwaitinfo(&sig_set, NULL);
+		sleep(10);
+		//prctl(TC_GPIO_PIN20_FALSE, NULL);
 	}
 #ifdef CONFIG_EXAMPLES_TIMER_FRT_MEASUREMENT
 	if (ioctl(frt_fd, TCIOC_GETSTATUS, (unsigned long)(uintptr_t)&after) < 0) {

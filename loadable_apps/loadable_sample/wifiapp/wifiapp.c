@@ -20,6 +20,7 @@
  * Included Files
  ****************************************************************************/
 #include <tinyara/config.h>
+#include <sys/prctl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -59,50 +60,9 @@ int wifiapp_main(int argc, char **argv)
 	preapp_start(argc, argv);
 #endif
 
+	prctl(TC_GPIO_PIN20_CONFIG, NULL);
 	printf("This is WIFI App\n");
 
-#ifndef CONFIG_EXAMPLES_MICOM_TIMER_TEST
-#ifdef CONFIG_BINARY_MANAGER
-	int ret;
-	ret = binary_manager_notify_binary_started();
-	if (ret < 0) {
-		printf("WIFI notify 'START' state FAIL\n", ret);
-	}
-#endif
-
-#ifndef CONFIG_ENABLE_RECOVERY_AGING_TEST
-	while (is_testing) {
-		display_test_scenario();
-		ch = getchar();
-		switch (ch) {
-#ifdef CONFIG_EXAMPLES_MESSAGING_TEST
-		case 'M':
-		case 'm':
-			messaging_test();
-			break;
-#endif
-#ifdef CONFIG_EXAMPLES_RECOVERY_TEST
-		case 'R':
-		case 'r':
-			recovery_test();
-			is_testing = false;
-			break;
-#endif
-		case 'X':
-		case 'x':
-			printf("Test will be finished.\n");
-			is_testing = false;
-			break;
-		default:
-			printf("Invalid Scenario.\n");
-			break;
-		}
-	}
-#else
-	recovery_test();
-#endif
-
-#endif /* CONFIG_EXAMPLES_MICOM_TIMER_TEST */
 	while (1) {
 		sleep(10);
 		printf("[%d] WIFI ALIVE\n", getpid());

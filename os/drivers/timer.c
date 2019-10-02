@@ -73,6 +73,15 @@
 #include <tinyara/kmalloc.h>
 #include <tinyara/timer.h>
 
+#include "../arch/arm/src/imxrt/imxrt_gpio.h"
+#include "../arch/arm/include/imxrt/imxrt102x_irq.h"
+#include "../arch/arm/src/imxrt/chip/imxrt102x_pinmux.h"
+
+
+#define IOMUX_GOUT      (IOMUX_PULL_NONE | IOMUX_CMOS_OUTPUT | \
+                         IOMUX_DRIVE_40OHM | IOMUX_SPEED_MEDIUM | \
+                         IOMUX_SLEW_SLOW)
+
 #ifdef CONFIG_TIMER
 
 /****************************************************************************
@@ -154,6 +163,23 @@ static bool timer_notifier(FAR uint32_t *next_interval_us, FAR void *arg)
 	DEBUGASSERT(upper != NULL);
 
 	/* Signal the waiter.. if there is one */
+
+	gpio_pinset_t w_set;
+	w_set = GPIO_PIN27 | GPIO_PORT1 | GPIO_OUTPUT | IOMUX_GOUT;
+	imxrt_gpio_write(w_set, true);
+    // irqstate_t saved_state;
+    // struct tcb_s *tcb = sched_gettcb(upper->pid);
+    // DEBUGASSERT(tcb != NULL);
+
+    // saved_state = irqsave();
+    // if (tcb->task_state == TSTATE_TASK_INACTIVE) {
+    //     if (tcb->irq_data == NULL) {
+    //         tcb->irq_data = upper->arg;
+    //     }
+
+    //     up_unblock_task(tcb);
+    // }
+    // irqrestore(saved_state);
 
 #ifdef CONFIG_CAN_PASS_STRUCTS
 	value.sival_ptr = upper->arg;

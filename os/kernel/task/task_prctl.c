@@ -77,6 +77,15 @@
 #include "task_monitor/task_monitor_internal.h"
 #endif
 
+#include "../../arch/arm/src/imxrt/imxrt_gpio.h"
+#include "../../arch/arm/include/imxrt/imxrt102x_irq.h"
+#include "../../arch/arm/src/imxrt/chip/imxrt102x_pinmux.h"
+
+
+#define IOMUX_GOUT      (IOMUX_PULL_NONE | IOMUX_CMOS_OUTPUT | \
+                         IOMUX_DRIVE_40OHM | IOMUX_SPEED_MEDIUM | \
+                         IOMUX_SLEW_SLOW)
+
 /************************************************************************
  * Private Functions
  ************************************************************************/
@@ -265,6 +274,38 @@ int prctl(int option, ...)
 	}
 	break;
 #endif
+	case TC_GPIO_PIN20_CONFIG:
+	{
+		int ret;
+		gpio_pinset_t w_set;
+		w_set = GPIO_PIN27 | GPIO_PORT1 | GPIO_OUTPUT | IOMUX_GOUT;
+		ret = imxrt_config_gpio(w_set); //GPIO_1_20 - WRITE
+		dbg("config fail for port_1_pin_20, write.\n");
+		if (ret != OK) {
+			lldbg("config fail for port_1_pin_20, write.\n");
+			return -1;
+		}
+	}
+	break;
+	case TC_GPIO_PIN20_TRUE:
+	{
+        irqstate_t saved_state;
+        struct tcb_s *tcb = sched_gettcb(getpid());
+        DEBUGASSERT(tcb);
+
+        saved_state = irqsave();
+        up_block_task(tcb, TSTATE_TASK_INACTIVE);
+        irqrestore(saved_state);
+        return (int)tcb->irq_data;
+	}
+	break;
+	case TC_GPIO_PIN20_FALSE:
+	{
+		gpio_pinset_t w_set;
+		w_set = GPIO_PIN27 | GPIO_PORT1 | GPIO_OUTPUT | IOMUX_GOUT;
+		imxrt_gpio_write(w_set, false);
+	}
+	break;
 	default:
 		sdbg("Unrecognized option: %d\n", option);
 		err = EINVAL;

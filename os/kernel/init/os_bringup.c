@@ -95,6 +95,15 @@
 #include "task_monitor/task_monitor_internal.h"
 #endif
 
+#include "../arch/arm/src/imxrt/imxrt_gpio.h"
+#include "../arch/arm/include/imxrt/imxrt102x_irq.h"
+#include "../arch/arm/src/imxrt/chip/imxrt102x_pinmux.h"
+
+
+#define IOMUX_GOUT      (IOMUX_PULL_NONE | IOMUX_CMOS_OUTPUT | \
+                         IOMUX_DRIVE_40OHM | IOMUX_SPEED_MEDIUM | \
+                         IOMUX_SLEW_SLOW)
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/

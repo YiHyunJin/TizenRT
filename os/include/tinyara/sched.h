@@ -627,6 +627,7 @@ struct tcb_s {
 #ifdef CONFIG_TASK_MONITOR
 	bool is_active;
 #endif
+	int irq_data;
 };
 
 /* struct task_tcb_s *************************************************************/
