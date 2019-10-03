@@ -45,7 +45,6 @@ static void display_test_scenario(void)
 	printf("\t-Press X or x : Terminate Tests.\n");
 }
 
-extern int preapp_start(int argc, char **argv);
 
 #ifdef CONFIG_APP_BINARY_SEPARATION
 int main(int argc, char **argv)
@@ -56,13 +55,8 @@ int wifiapp_main(int argc, char **argv)
 	char ch;
 	bool is_testing = true;
 
-#if defined(CONFIG_SYSTEM_PREAPP_INIT) && defined(CONFIG_APP_BINARY_SEPARATION)
-	preapp_start(argc, argv);
-#endif
-
-	prctl(TC_GPIO_PIN20_CONFIG, NULL);
 	printf("This is WIFI App\n");
-
+	recovery_test();
 	while (1) {
 		sleep(10);
 		printf("[%d] WIFI ALIVE\n", getpid());

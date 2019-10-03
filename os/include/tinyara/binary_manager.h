@@ -27,6 +27,9 @@
 
 #ifdef CONFIG_BINARY_MANAGER
 
+// testcase
+#define PAPER_OPTIMIZE 1
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -101,6 +104,16 @@ enum binmgr_response_result_type {
 	BINMGR_INVALID_PARAM = -4,
 	BINMGR_NOT_FOUND = -5,
 	BINMGR_ALREADY_REGISTERED = -6,
+};
+struct fault_data {
+	int faultid;
+	int binid;
+};
+
+struct faultmsg_s {
+	struct faultmsg_s *flink;	/* Implements singly linked list */
+	int bin_id;
+	int faultid;
 };
 
 /****************************************************************************
@@ -190,6 +203,10 @@ typedef struct binmgr_getinfo_all_response_s binmgr_getinfo_all_response_t;
  * Public Function Prototypes
  ****************************************************************************/
 void binary_manager_register_partition(int part_num, int part_type, char *name, int part_size);
+void recovery_exclude_scheduling_each(FAR struct tcb_s *tcb, FAR void *arg);
+
+struct faultmsg_s *binmgr_alloc_faultmsg(void);
+void binmgr_free_faultmsg(FAR struct faultmsg_s *msg);
 
 #ifdef __cplusplus
 #define EXTERN extern "C"

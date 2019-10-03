@@ -297,6 +297,7 @@ int exec_module(FAR const struct binary_s *binp)
 
 #ifdef CONFIG_BINMGR_RECOVERY
 	tcb->cmn.group->tg_loadtask = pid;
+	tcb->cmn.group->tg_rtflag = binp->rtflag;
 #endif
 
 	/* Store the address of the applications userspace object in the tcb  */

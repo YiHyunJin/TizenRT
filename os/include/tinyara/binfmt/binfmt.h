@@ -144,6 +144,7 @@ struct binary_s {
 	 * by the caller between load_module() and exec_module() calls.
 	 */
 
+	int rtflag;
 	uint8_t priority;			/* Task execution priority */
 	size_t stacksize;			/* Size of the stack in bytes (unallocated) */
 	size_t filelen;                 /* Size of binary size, used only when underlying is MTD */
@@ -385,7 +386,7 @@ int binfmt_exit(FAR struct binary_s *bin);
  *
  ****************************************************************************/
 #ifdef CONFIG_BINARY_MANAGER
-int load_binary(FAR const char *filename, load_attr_t *load_attr);
+int load_binary(FAR const char *filename, load_attr_t *load_attr, int rtflag);
 #endif
 
 #undef EXTERN

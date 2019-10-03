@@ -73,7 +73,7 @@ extern void mpu_user_extsram_context(uint32_t region, uintptr_t base, size_t siz
  *
  ****************************************************************************/
 #ifdef CONFIG_BINARY_MANAGER
-int load_binary(FAR const char *filename, load_attr_t *load_attr)
+int load_binary(FAR const char *filename, load_attr_t *load_attr, int rtflag)
 {
 	FAR struct binary_s *bin;
 	int pid;
@@ -123,6 +123,7 @@ int load_binary(FAR const char *filename, load_attr_t *load_attr)
 	bin->uheap_size = size;
 #endif
 	bin->compression_type = load_attr->compression_type;
+	bin->rtflag = rtflag;
 
 	/* Load the module into memory */
 

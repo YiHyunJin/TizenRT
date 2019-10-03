@@ -64,7 +64,7 @@ static void binary_manager_board_reset(void)
 #endif
 }
 
-static void recovery_release_binary_sem(int binid)
+void recovery_release_binary_sem(int binid)
 {
 	sem_t *sem;
 	irqstate_t flags;
@@ -91,26 +91,25 @@ static void recovery_release_binary_sem(int binid)
 	irqrestore(flags);
 }
 
-static void recovery_exclude_scheduling_each(FAR struct tcb_s *tcb, FAR void *arg)
+void recovery_exclude_scheduling_each(FAR struct tcb_s *tcb, FAR void *arg)
 {
-	int binid;
+	//int binid;
+	//int faultid;
 	irqstate_t flags;
+	struct fault_data *msg = (struct fault_data *)arg;
 
-	binid = (int)arg;
+	/*binid = (int)arg;
 	if (binid < 0) {
 		return;
-	}
+	}*/
 
-	if (tcb->group->tg_loadtask == binid) {
-
+	if (tcb->group->tg_loadtask == msg->binid && tcb->pid != msg->faultid) {
 		/* Recover semaphores, message queue, and watchdog timer resources.*/
 		task_recover(tcb);
 
-		flags = irqsave();
 		/* Remove the TCB from the task list associated with the state */
 		dq_rem((FAR dq_entry_t *)tcb, (dq_queue_t *)g_tasklisttable[tcb->task_state].list);
 		sched_addblocked(tcb, TSTATE_TASK_INACTIVE);
-		irqrestore(flags);
 		bmllvdbg("Remove pid %d from task list\n", tcb->pid);
 	}
 }
@@ -129,17 +128,21 @@ static void recovery_exclude_scheduling_each(FAR struct tcb_s *tcb, FAR void *ar
  *   Zero (OK) on success; otherwise -1 (ERROR) value is returned.
  *
  ****************************************************************************/
-static int recovery_exclude_scheduling(int binid)
+int recovery_exclude_scheduling(int binid, int faultid)
 {
-	if (binid < 0) {
-		return ERROR;
-	}
+	struct fault_data msg;
 
+	/*if (binid < 0) {
+		return ERROR;
+	}*/
+
+	msg.binid = binid;
+	msg.faultid = faultid;
 	/* Exclude all tasks and pthreads created in a binary which has 'binid' from scheduling */
-	sched_foreach(recovery_exclude_scheduling_each, (FAR void *)binid);
+	sched_foreach(recovery_exclude_scheduling_each, (FAR void *)&msg);
 
 	/* Release all semaphores held by the threads in binary */
-	recovery_release_binary_sem(binid);
+	//recovery_release_binary_sem(binid);
 
 	return OK;
 }
@@ -168,6 +171,7 @@ void binary_manager_recovery(int pid)
 	int bin_idx;
 	char type_str[1];
 	struct tcb_s *tcb;
+	struct fault_data msg;
 	char *loading_data[LOADTHD_ARGC + 1];
 
 	bmllvdbg("Try to recover fault with pid %d\n", pid);
@@ -188,11 +192,14 @@ void binary_manager_recovery(int pid)
 			goto reboot_board;
 		}
 
+		BIN_STATE(bin_idx) = BINARY_FAULT;
+
 		/* Exclude its all children from scheduling if the binary is registered with the binary manager */
-		ret = recovery_exclude_scheduling(bin_id);
+		//ret = recovery_exclude_scheduling(bin_id);
+		ret = reload_kill_binary(bin_id);
 		if (ret == OK) {
 			/* load binary and update binid */
-			BIN_STATE(bin_idx) = BINARY_FAULT;
+			//BIN_STATE(bin_idx) = BINARY_FAULT;
 			memset(loading_data, 0, sizeof(char *) * (LOADTHD_ARGC + 1));
 			loading_data[0] = itoa(LOADCMD_RELOAD, type_str, 10);
 			loading_data[1] = BIN_NAME(bin_idx);

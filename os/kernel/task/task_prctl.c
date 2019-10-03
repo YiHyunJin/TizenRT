@@ -274,6 +274,13 @@ int prctl(int option, ...)
 	}
 	break;
 #endif
+	case TC_GPIO_PIN20_FALSE:
+	{
+		gpio_pinset_t w_set;
+		w_set = GPIO_PIN27 | GPIO_PORT1 | GPIO_OUTPUT | IOMUX_GOUT;
+		imxrt_gpio_write(w_set, false);
+	}
+	break;
 	case TC_GPIO_PIN20_CONFIG:
 	{
 		int ret;
@@ -285,25 +292,6 @@ int prctl(int option, ...)
 			lldbg("config fail for port_1_pin_20, write.\n");
 			return -1;
 		}
-	}
-	break;
-	case TC_GPIO_PIN20_TRUE:
-	{
-        irqstate_t saved_state;
-        struct tcb_s *tcb = sched_gettcb(getpid());
-        DEBUGASSERT(tcb);
-
-        saved_state = irqsave();
-        up_block_task(tcb, TSTATE_TASK_INACTIVE);
-        irqrestore(saved_state);
-        return (int)tcb->irq_data;
-	}
-	break;
-	case TC_GPIO_PIN20_FALSE:
-	{
-		gpio_pinset_t w_set;
-		w_set = GPIO_PIN27 | GPIO_PORT1 | GPIO_OUTPUT | IOMUX_GOUT;
-		imxrt_gpio_write(w_set, false);
 	}
 	break;
 	default:

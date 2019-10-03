@@ -146,7 +146,7 @@ static pthread_addr_t timer_thread(pthread_addr_t arg)
 	ret = sigaction(EXAMPLE_TIMER_SIGNO, &act, NULL);
 	if (ret == (int)SIG_ERR) {
 		printf("sigaction Failed\n");
-		return;
+		return NULL;
 	}
 
 	/*
@@ -214,9 +214,10 @@ static pthread_addr_t timer_thread(pthread_addr_t arg)
 
 #endif
 	while (count > 0) {
-		//sigwaitinfo(&sig_set, NULL);
+		// sigwaitinfo(&sig_set, NULL);
 		sleep(10);
-		//prctl(TC_GPIO_PIN20_FALSE, NULL);
+		//sched_yield();
+		// prctl(TC_GPIO_PIN20_FALSE, NULL);
 	}
 #ifdef CONFIG_EXAMPLES_TIMER_FRT_MEASUREMENT
 	if (ioctl(frt_fd, TCIOC_GETSTATUS, (unsigned long)(uintptr_t)&after) < 0) {
@@ -248,7 +249,7 @@ static pthread_addr_t timer_thread(pthread_addr_t arg)
 	}
 #endif
 error:
-	pthread_sigmask(SIG_UNBLOCK, &sig_set, NULL);
+	// pthread_sigmask(SIG_UNBLOCK, &sig_set, NULL);
 	pthread_exit(NULL);
 #ifdef CONFIG_EXAMPLES_TIMER_FRT_MEASUREMENT
 	close(frt_fd);

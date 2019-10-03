@@ -34,9 +34,12 @@
 #include <tinyara/mm/mm.h>
 #include <tinyara/sched.h>
 #include <tinyara/init.h>
+#include <tinyara/timer.h>
 
+#include <sys/prctl.h>
 #include "task/task.h"
 #include "binary_manager.h"
+extern int frt_fd;
 
 #if (defined(CONFIG_BUILD_PROTECTED) || defined(CONFIG_BUILD_KERNEL)) && defined(CONFIG_MM_KERNEL_HEAP)
 extern volatile sq_queue_t g_delayed_kfree;
@@ -153,6 +156,10 @@ int binary_manager_load_binary(int bin_idx)
 	load_attr_t load_attr;
 	char devname[BINMGR_DEVNAME_LEN];
 	binary_header_t header_data[PARTS_PER_BIN];
+	//int frt_fd;
+	uint32_t time_diff;
+	struct timer_status_s before;
+	struct timer_status_s after;
 
 	latest_ver = -1;
 	latest_idx = -1;
@@ -195,6 +202,11 @@ int binary_manager_load_binary(int bin_idx)
 		bmdbg("Failed to find loadable binary %d\n", bin_idx);
 		return ERROR;
 	}
+/*	if (ioctl(frt_fd, TCIOC_START, TRUE) < 0) {
+		lldbg("ERROR: Failed to start Free Run Timer: %d\n", errno);
+		return ERROR;
+	}
+*/
 
 	/* Load binary */
 	do {
@@ -217,11 +229,21 @@ int binary_manager_load_binary(int bin_idx)
 			sched_lock();
 			is_sched_locked = true;
 		}
-
-		ret = load_binary(devname, &load_attr);
+/*		if (ioctl(frt_fd, TCIOC_GETSTATUS, (unsigned long)(uintptr_t)&before) < 0) {
+			lldbg("ERROR: Failed to get Free Run Timer status: %d\n", errno);
+			return ERROR;
+		}
+*/
+		ret = load_binary(devname, &load_attr, bin_idx);
 		if (ret > 0) {
 			bin_pid = (pid_t)ret;
-			bmvdbg("Load '%s' success! pid = %d\n", devname, bin_pid);
+/*			if (ioctl(frt_fd, TCIOC_GETSTATUS, (unsigned long)(uintptr_t)&after) < 0) {
+				lldbg("ERROR: Failed to get Free Run Timer status: %d\n", errno);
+				break;
+			}
+			time_diff = after.timeleft - before.timeleft;
+			lldbg("TIME %d\n", time_diff);
+*/			bmvdbg("Load '%s' success! pid = %d\n", devname, bin_pid);
 			break;
 		} 
 #if (defined(CONFIG_BUILD_PROTECTED) || defined(CONFIG_BUILD_KERNEL)) && defined(CONFIG_MM_KERNEL_HEAP)
@@ -269,6 +291,10 @@ int binary_manager_load_binary(int bin_idx)
 	strncpy(BIN_NAME(bin_idx), header_data[latest_idx].bin_name, BIN_NAME_MAX);
 
 	bmvdbg("BIN TABLE[%d] %d %d %s %s %s\n", bin_idx, BIN_SIZE(bin_idx), BIN_RAMSIZE(bin_idx), BIN_VER(bin_idx), BIN_KERNEL_VER(bin_idx), BIN_NAME(bin_idx));
+
+	/*if (ioctl(frt_fd, TCIOC_STOP, 0) < 0) {
+		lldbg("ERROR: Failed to stop the Free Run Timer: %d\n", errno);
+	}*/
 
 	if (is_sched_locked) {
 		sched_unlock();
@@ -327,7 +353,9 @@ int reload_kill_binary(int binid)
 		return ERROR;
 	}
 
-	sched_lock();
+	//sched_lock();
+
+	recovery_release_binary_sem(binid);
 
 	/* Kill all tasks and pthreads created in a binary which has 'binid' */
 	sched_foreach(reload_kill_each, (FAR void *)binid);
@@ -335,11 +363,11 @@ int reload_kill_binary(int binid)
 	/* Finally, unload binary */
 	ret = task_terminate(binid, true);
 	if (ret < 0) {
-		sched_unlock();
+		//sched_unlock();
 		bmdbg("Failed to unload binary %d, ret %d, errno %d\n", binid, ret, errno);
 		return ERROR;
 	}
-	sched_unlock();
+	//sched_unlock();
 	bmvdbg("Unload binary! pid %d\n", binid);
 
 	return OK;
@@ -394,10 +422,10 @@ static int binary_manager_reload(char *bin_name)
 
 	if (BIN_STATE(bin_idx) != BINARY_INACTIVE) {
 		/* Kill its children and restart binary if the binary is registered with the binary manager */
-		ret = reload_kill_binary(BIN_ID(bin_idx));
+		/*ret = reload_kill_binary(BIN_ID(bin_idx));
 		if (ret != OK) {
 			return BINMGR_OPERATION_FAIL;
-		}
+		}*/
 		BIN_ID(bin_idx) = -1;
 
 		/* Clean callbacks of binary */

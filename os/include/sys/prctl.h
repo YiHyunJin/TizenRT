@@ -95,9 +95,8 @@ enum prctl_type_e {
 	PR_MSG_REMOVE = 6,
 	PR_MONITOR_REGISTER = 7,
 	PR_MONITOR_UPDATE = 8,
-	TC_GPIO_PIN20_TRUE = 9,
-	TC_GPIO_PIN20_FALSE = 10,
-	TC_GPIO_PIN20_CONFIG = 11,
+	TC_GPIO_PIN20_FALSE = 9,
+	TC_GPIO_PIN20_CONFIG = 10,
 };
 
 /****************************************************************************

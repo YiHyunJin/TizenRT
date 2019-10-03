@@ -219,6 +219,7 @@ static int thread_create(FAR const char *name, uint8_t ttype, int priority, int 
 	FAR struct tcb_s *rtcb = this_task();
 	/* Set main task id in a binary for recovery */
 	tcb->cmn.group->tg_loadtask = rtcb->group->tg_loadtask;
+	tcb->cmn.group->tg_rtflag = rtcb->group->tg_rtflag;
 #endif
 
 #ifdef CONFIG_HEAPINFO_USER_GROUP

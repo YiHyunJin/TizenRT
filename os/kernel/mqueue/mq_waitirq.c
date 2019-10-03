@@ -64,6 +64,15 @@
 
 #include "mqueue/mqueue.h"
 
+#include "../../arch/arm/src/imxrt/imxrt_gpio.h"
+#include "../../arch/arm/include/imxrt/imxrt102x_irq.h"
+#include "../../arch/arm/src/imxrt/chip/imxrt102x_pinmux.h"
+
+
+#define IOMUX_GOUT      (IOMUX_PULL_NONE | IOMUX_CMOS_OUTPUT | \
+                         IOMUX_DRIVE_40OHM | IOMUX_SPEED_MEDIUM | \
+                         IOMUX_SLEW_SLOW)
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -115,7 +124,8 @@ void mq_waitirq(FAR struct tcb_s *wtcb, int errcode)
 	/* Disable interrupts.  This is necessary because an interrupt handler may
 	 * attempt to send a message while we are doing this.
 	 */
-
+	gpio_pinset_t w_set;
+	w_set = GPIO_PIN27 | GPIO_PORT1 | GPIO_OUTPUT | IOMUX_GOUT;
 	saved_state = irqsave();
 
 	/* It is possible that an interrupt/context switch beat us to the punch and
@@ -147,7 +157,8 @@ void mq_waitirq(FAR struct tcb_s *wtcb, int errcode)
 		wtcb->pterrno = errcode;
 
 		/* Restart the task. */
-
+		imxrt_gpio_write(w_set, true);
+		imxrt_gpio_write(w_set, false);
 		up_unblock_task(wtcb);
 	}
 

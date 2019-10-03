@@ -55,6 +55,7 @@
  ****************************************************************************/
 
 #include <tinyara/config.h>
+extern struct tcb_s *binmgr_tcb;
 
 /* Output debug info if stack dump is selected -- even if debug is not
  * selected.
@@ -77,11 +78,13 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <debug.h>
+#include <errno.h>
 
 #include <tinyara/irq.h>
 #include <tinyara/arch.h>
 #include <tinyara/board.h>
 #include <tinyara/syslog/syslog.h>
+#include <tinyara/timer.h>
 
 #include <arch/board/board.h>
 #include <tinyara/sched.h>
@@ -101,10 +104,22 @@
 #include "up_internal.h"
 #include "mpu.h"
 
+#include "../../../arm/src/imxrt/imxrt_gpio.h"
+#include "../../../arm/include/imxrt/imxrt102x_irq.h"
+#include "../../../arm/src/imxrt/chip/imxrt102x_pinmux.h"
+
+
+#define IOMUX_GOUT      (IOMUX_PULL_NONE | IOMUX_CMOS_OUTPUT | \
+                         IOMUX_DRIVE_40OHM | IOMUX_SPEED_MEDIUM | \
+                         IOMUX_SLEW_SLOW)
+
+
 #ifdef CONFIG_BINMGR_RECOVERY
 bool abort_mode = false;
 extern uint32_t g_assertpc;
 #endif
+extern int frt_fd;
+extern sq_queue_t fault_list;
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -431,6 +446,22 @@ static void _up_assert(int errorcode)
 #endif
 #endif /* CONFIG_BOARD_ASSERT_AUTORESET */
 }
+ 
+static void recovery_exclude_scheduling_highprio(FAR struct tcb_s *tcb, FAR void *arg)
+{
+	irqstate_t flags;
+	struct fault_data *msg = (struct fault_data *)arg;
+
+	if (tcb->sched_priority >= 200 && tcb->group->tg_loadtask == msg->binid && tcb->pid != msg->faultid) {
+		/* Recover semaphores, message queue, and watchdog timer resources.*/
+		task_recover(tcb);
+
+		/* Remove the TCB from the task list associated with the state */
+		dq_rem((FAR dq_entry_t *)tcb, (dq_queue_t *)g_tasklisttable[tcb->task_state].list);
+		sched_addblocked(tcb, TSTATE_TASK_INACTIVE);
+		bmllvdbg("Remove pid %d from task list\n", tcb->pid);
+	}
+}
 
 #ifdef CONFIG_BINMGR_RECOVERY
 /****************************************************************************
@@ -440,10 +471,53 @@ static void recovery_user_assert(void)
 {
 	int ret;
 	mqd_t mqfd;
+	irqstate_t flags;
 	binmgr_request_t request_msg;
 	struct tcb_s *tcb;
+	uint32_t time_diff;
+	struct faultmsg_s *msg;
+	struct fault_data data;
 
+	gpio_pinset_t w_set;
+	w_set = GPIO_PIN27 | GPIO_PORT1 | GPIO_OUTPUT | IOMUX_GOUT;
 	/* Get mqfd for sending recovery mesage to binary manager */
+
+	imxrt_gpio_write(w_set, true);
+	imxrt_gpio_write(w_set, false);
+#if PAPER_OPTIMIZE
+#if 0
+	if (current_regs) {
+		sched_removereadytorun(tcb);
+#if CONFIG_RR_INTERVAL > 0
+		tcb->timeslice = 0;
+#endif
+		tcb->sched_priority = SCHED_PRIORITY_MIN;
+		sched_addreadytorun(tcb);
+	}
+#endif
+	tcb = sched_self();
+	if (tcb != NULL && tcb->group != NULL && tcb->group->tg_loadtask > 0) {
+		if (tcb->group->tg_rtflag == 1) {
+			flags = irqsave();
+			data.binid = tcb->group->tg_loadtask;
+			data.faultid = tcb->pid;
+			sched_foreach(recovery_exclude_scheduling_highprio, (FAR void *)&data);
+
+			irqrestore(flags);
+		}
+		msg = binmgr_alloc_faultmsg();
+		if (msg != NULL) {
+			msg->bin_id = tcb->group->tg_loadtask;
+			msg->faultid = tcb->pid;
+			
+			sq_addlast((sq_entry_t *)msg, (sq_queue_t *)&fault_list);
+			mq_waitirq(binmgr_tcb, EAGAIN);
+			imxrt_gpio_write(w_set, true);
+			imxrt_gpio_write(w_set, false);
+			return;
+		}
+	}
+#else
 	mqfd = binary_manager_get_mqfd();
 	if (mqfd != NULL) {
 		request_msg.cmd = BINMGR_FAULT;
@@ -457,7 +531,7 @@ static void recovery_user_assert(void)
 			tcb->sched_priority = SCHED_PRIORITY_MIN;
 			sched_addreadytorun(tcb);
 		}
-
+	
 		/* Send a message to binary manager with pid of the faulty task */
 		ret = mq_send(mqfd, (const char *)&request_msg, sizeof(binmgr_request_t), BINMGR_FAULT_PRIO);
 		if (ret == OK) {
@@ -469,6 +543,8 @@ static void recovery_user_assert(void)
 			return;
 		}
 	}
+#endif
+
 	/* Failed to request for recovery to binary manager */
 	_up_assert(EXIT_FAILURE);
 }

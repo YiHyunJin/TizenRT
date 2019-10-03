@@ -372,6 +372,7 @@ struct task_group_s {
 #endif
 #if defined(CONFIG_BINARY_MANAGER)
 	pid_t tg_loadtask;			/* The ID of the main task in binary        */
+	int tg_rtflag;
 #endif
 
 	uint8_t tg_flags;			/* See GROUP_FLAG_* definitions             */
@@ -627,7 +628,7 @@ struct tcb_s {
 #ifdef CONFIG_TASK_MONITOR
 	bool is_active;
 #endif
-	int irq_data;
+	// int irq_data;
 };
 
 /* struct task_tcb_s *************************************************************/

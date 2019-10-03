@@ -28,10 +28,12 @@
 #include <string.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <queue.h>
 #include <tinyara/binary_manager.h>
+#include <tinyara/timer.h>
 
 #include "binary_manager.h"
-
+int frt_fd;
 /****************************************************************************
  * Private Definitions
  ****************************************************************************/
@@ -45,10 +47,17 @@
 #define KERNEL_VER               "2.0"
 #endif
 
+#define FAULTMSG_COUNT   3
+
 /* Binary table, the first data [0] is for kernel. */
 static binmgr_bininfo_t bin_table[BINARY_COUNT];
 static int g_bin_count;
 static mqd_t g_binmgr_mq_fd;
+
+sq_queue_t fault_list;
+static struct faultmsg_s g_prealloc_faultmsg[FAULTMSG_COUNT];
+static FAR struct faultmsg_s *g_freed_faultmsg;
+
 
 /****************************************************************************
  * Public Functions
@@ -145,6 +154,38 @@ int binary_manager_update_running_state(int bin_id)
 	return binary_manager_notify_state_changed(bin_idx, BINARY_STARTED);
 }
 
+struct faultmsg_s *binmgr_alloc_faultmsg(void)
+{
+	FAR struct faultmsg_s *msg;
+
+	msg = g_freed_faultmsg;
+	if (msg) {
+		g_freed_faultmsg = msg->flink;
+		msg->flink = NULL;
+	}
+
+	return msg;
+}
+
+void binmgr_free_faultmsg(FAR struct faultmsg_s *msg)
+{
+	msg->flink = g_freed_faultmsg;
+	g_freed_faultmsg = msg;
+}
+
+void binary_manager_init_faultlist(void)
+{
+	int idx;
+
+	g_freed_faultmsg = g_prealloc_faultmsg;
+	for (idx = 0; idx < (FAULTMSG_COUNT - 1); idx++) {
+		g_prealloc_faultmsg[idx].flink = &g_prealloc_faultmsg[idx + 1];
+	}
+
+	g_prealloc_faultmsg[FAULTMSG_COUNT - 1].flink = NULL;
+}
+
+struct tcb_s *binmgr_tcb;
 /****************************************************************************
  * Main Function
  ****************************************************************************/
@@ -159,6 +200,7 @@ int binary_manager(int argc, char *argv[])
 	char data_str[1];
 	char *loading_data[LOADTHD_ARGC + 1];
 	binmgr_request_t request_msg;
+	struct faultmsg_s *msg;
 
 	struct mq_attr attr;
 	attr.mq_maxmsg = BINMGR_MAX_MSG;
@@ -181,6 +223,11 @@ int binary_manager(int argc, char *argv[])
 		return 0;
 	}
 
+	binmgr_tcb = sched_self();
+	lldbg("binmgr tcb %p \n", binmgr_tcb);
+
+	binary_manager_init_faultlist();
+
 	/* Execute loading thread for load all binaries */
 	loading_data[0] = itoa(LOADCMD_LOAD_ALL, type_str, 10);
 	loading_data[1] = NULL;
@@ -192,6 +239,7 @@ int binary_manager(int argc, char *argv[])
 	} else {
 		bmvdbg("Loading thread with pid %d will load binaries!\n", ret);
 	}
+	sq_init(&fault_list);
 
 	while (1) {
 		ret = ERROR;
@@ -199,14 +247,22 @@ int binary_manager(int argc, char *argv[])
 
 		nbytes = mq_receive(g_binmgr_mq_fd, (char *)&request_msg, sizeof(binmgr_request_t), NULL);
 		if (nbytes <= 0) {
-			bmdbg("receive ERROR %d, errno %d, retry!\n", nbytes, errno);
+			//lldbg("receive ERROR %d, errno %d, retry!\n", nbytes, errno);
+#ifdef CONFIG_BINMGR_RECOVERY
+			if (errno == EAGAIN && !sq_empty(&fault_list)) {
+				//binary_manager_recovery(request_msg.requester_pid);
+				msg = (struct faultmsg_s *)sq_remfirst(&fault_list);
+				binary_manager_recovery(msg->faultid);
+				binmgr_free_faultmsg(msg);
+			}
+#endif
 			continue;
 		}
 
 		bmvdbg("Recevied Request msg : cmd = %d\n", request_msg);
 		switch (request_msg.cmd) {
 #ifdef CONFIG_BINMGR_RECOVERY
-		case BINMGR_FAULT:
+		case BINMGR_FAULT: 
 			binary_manager_recovery(request_msg.requester_pid);
 			break;
 #endif
