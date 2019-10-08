@@ -452,14 +452,14 @@ static void recovery_exclude_scheduling_highprio(FAR struct tcb_s *tcb, FAR void
 	irqstate_t flags;
 	struct fault_data *msg = (struct fault_data *)arg;
 
-	if (tcb->sched_priority >= 200 && tcb->group->tg_loadtask == msg->binid && tcb->pid != msg->faultid) {
+	if (tcb->group->tg_loadtask == msg->binid && tcb->pid != msg->faultid) {
 		/* Recover semaphores, message queue, and watchdog timer resources.*/
 		task_recover(tcb);
 
 		/* Remove the TCB from the task list associated with the state */
 		dq_rem((FAR dq_entry_t *)tcb, (dq_queue_t *)g_tasklisttable[tcb->task_state].list);
 		sched_addblocked(tcb, TSTATE_TASK_INACTIVE);
-		bmllvdbg("Remove pid %d from task list\n", tcb->pid);
+		//bmllvdbg("Remove pid %d from task list\n", tcb->pid);
 	}
 }
 
@@ -479,7 +479,7 @@ static void recovery_user_assert(void)
 	struct fault_data data;
 
 	gpio_pinset_t w_set;
-	w_set = GPIO_PIN27 | GPIO_PORT1 | GPIO_OUTPUT | IOMUX_GOUT;
+	w_set = GPIO_PIN28 | GPIO_PORT1 | GPIO_OUTPUT | IOMUX_GOUT;
 	/* Get mqfd for sending recovery mesage to binary manager */
 
 	imxrt_gpio_write(w_set, true);
@@ -498,13 +498,25 @@ static void recovery_user_assert(void)
 	tcb = sched_self();
 	if (tcb != NULL && tcb->group != NULL && tcb->group->tg_loadtask > 0) {
 		if (tcb->group->tg_rtflag == 1) {
-			flags = irqsave();
+			if (current_regs) {
+				sched_removereadytorun(tcb);
+#if CONFIG_RR_INTERVAL > 0
+				tcb->timeslice = 0;
+#endif
+				tcb->sched_priority = SCHED_PRIORITY_MIN;
+				sched_addreadytorun(tcb);
+			}
+			//flags = irqsave();
 			data.binid = tcb->group->tg_loadtask;
 			data.faultid = tcb->pid;
 			sched_foreach(recovery_exclude_scheduling_highprio, (FAR void *)&data);
 
-			irqrestore(flags);
+			//irqrestore(flags);
+		} else {
+			tcb->lockcount = 0;
 		}
+		imxrt_gpio_write(w_set, true);
+		imxrt_gpio_write(w_set, false);
 		msg = binmgr_alloc_faultmsg();
 		if (msg != NULL) {
 			msg->bin_id = tcb->group->tg_loadtask;
@@ -578,17 +590,23 @@ void dump_all_stack(void)
 
 void up_assert(const uint8_t *filename, int lineno)
 {
+
+	gpio_pinset_t w_set;
+	w_set = GPIO_PIN28 | GPIO_PORT1 | GPIO_OUTPUT | IOMUX_GOUT;
+
+	imxrt_gpio_write(w_set, true);
+	imxrt_gpio_write(w_set, false);
 	board_led_on(LED_ASSERTION);
 
 #if defined(CONFIG_DEBUG_DISPLAY_SYMBOL) || defined(CONFIG_BINMGR_RECOVERY)
 	abort_mode = true;
 #endif
 
-#if CONFIG_TASK_NAME_SIZE > 0
-	lldbg("Assertion failed at file:%s line: %d task: %s\n", filename, lineno, this_task()->name);
-#else
-	lldbg("Assertion failed at file:%s line: %d\n", filename, lineno);
-#endif
+// #if CONFIG_TASK_NAME_SIZE > 0
+// 	lldbg("Assertion failed at file:%s line: %d task: %s\n", filename, lineno, this_task()->name);
+// #else
+// 	lldbg("Assertion failed at file:%s line: %d\n", filename, lineno);
+// #endif
 
 #ifdef CONFIG_BINMGR_RECOVERY
 	uint32_t ksram_segment_end  = (uint32_t)__ksram_segment_start__  + (uint32_t)__ksram_segment_size__;
@@ -611,7 +629,7 @@ void up_assert(const uint8_t *filename, int lineno)
 	}
 #endif  /* CONFIG_BINMGR_RECOVERY */
 
-	up_dumpstate();
+	//up_dumpstate();
 
 #ifdef CONFIG_BINMGR_RECOVERY
 	if (is_kernel_assert == false) {

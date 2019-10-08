@@ -179,10 +179,43 @@ int main(int argc, char **argv)
 int micomapp_main(int argc, char **argv)
 #endif
 {
-#if defined(CONFIG_SYSTEM_PREAPP_INIT) && defined(CONFIG_APP_BINARY_SEPARATION)
-	preapp_start(argc, argv);
-#endif
-	prctl(TC_GPIO_PIN20_CONFIG, NULL);
+	printf("[%d] MICOM ALIVE\n", getpid());
+	int pid;
+	int i;
+	pthread_t thd;
+	pthread_attr_t attr;
+
+	pthread_attr_init(&attr);
+	attr.priority = 210;
+
+	for (i = 0; i < 1; i++) {
+		pid = task_create("mqwait", 210, 1024, mq_wait_task, (FAR char *const *)NULL);
+		// if (pid < 0) {
+		// 	printf("task create FAIL\n");
+		// 	return 0;
+		// }
+		pthread_create(&thd, &attr, (pthread_startroutine_t)mq_wait_thread, (pthread_addr_t)NULL);
+		//pthread_create(&thd, &attr, (pthread_startroutine_t)mq_wait_thread, (pthread_addr_t)NULL);
+	}
+	//pthread_create(&thd, &attr, (pthread_startroutine_t)mq_wait_thread, (pthread_addr_t)NULL);
+		
+	//  pid = task_create("sigwait", 210, 1024, mq_wait_task, (FAR char *const *)NULL);
+	// if (pid < 0) {
+	// 	printf("task create FAIL\n");
+	// 	return 0;
+	// }
+	// for (i = 0; i < 10; i++) {
+	// 	pid = task_create("mqwait", 210, 1024, mq_wait_task, (FAR char *const *)NULL);
+	// 	if (pid < 0) {
+	// 		printf("task create FAIL\n");
+	// 		return 0;
+	// 	}
+	// 	pthread_create(&thd, &attr, (pthread_startroutine_t)mq_wait_thread, (pthread_addr_t)NULL);
+	// 	//pthread_create(&thd, &attr, (pthread_startroutine_t)mq_wait_thread, (pthread_addr_t)NULL);
+	// }
+	sleep(2);
+	volatile uint32_t *addr;
+	*addr = 0xdeadbeef;
 	while (1) {
 		sleep(10);
 		printf("[%d] MICOM ALIVE\n", getpid());

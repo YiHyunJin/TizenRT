@@ -40,7 +40,7 @@ static void *assert_thread(void *index)
 	volatile uint32_t *addr;
 
 	addr = (uint32_t *)CONFIG_MPU_TEST_KERNEL_CODE_ADDR;
-	sleep(3);
+	sleep(2);
 	*addr = 0xdeadbeef;
 
 	return 0;
@@ -214,5 +214,5 @@ void recovery_test(void)
 
 	paper_test();
 
-	printf("I'm RECOVERY main! create mkchildren task %d\n", pid);
+	//printf("I'm RECOVERY main! create mkchildren task %d\n", pid);
 }

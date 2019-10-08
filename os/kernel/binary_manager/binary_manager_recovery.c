@@ -40,6 +40,15 @@
 #include "sched/sched.h"
 #include "binary_manager.h"
 
+#include "../../arch/arm/src/imxrt/imxrt_gpio.h"
+#include "../../arch/arm/include/imxrt/imxrt102x_irq.h"
+#include "../../arch/arm/src/imxrt/chip/imxrt102x_pinmux.h"
+
+
+#define IOMUX_GOUT      (IOMUX_PULL_NONE | IOMUX_CMOS_OUTPUT | \
+                         IOMUX_DRIVE_40OHM | IOMUX_SPEED_MEDIUM | \
+                         IOMUX_SLEW_SLOW)
+
 extern bool abort_mode;
 extern sq_queue_t g_sem_list;
 
@@ -174,6 +183,9 @@ void binary_manager_recovery(int pid)
 	struct fault_data msg;
 	char *loading_data[LOADTHD_ARGC + 1];
 
+	// gpio_pinset_t w_set;
+	// w_set = GPIO_PIN28 | GPIO_PORT1 | GPIO_OUTPUT | IOMUX_GOUT;
+
 	bmllvdbg("Try to recover fault with pid %d\n", pid);
 
 	if (pid > 0) {
@@ -196,7 +208,9 @@ void binary_manager_recovery(int pid)
 
 		/* Exclude its all children from scheduling if the binary is registered with the binary manager */
 		//ret = recovery_exclude_scheduling(bin_id);
+		// imxrt_gpio_write(w_set, true);
 		ret = reload_kill_binary(bin_id);
+		// imxrt_gpio_write(w_set, false);
 		if (ret == OK) {
 			/* load binary and update binid */
 			//BIN_STATE(bin_idx) = BINARY_FAULT;

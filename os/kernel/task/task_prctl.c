@@ -285,8 +285,11 @@ int prctl(int option, ...)
 	{
 		int ret;
 		gpio_pinset_t w_set;
+		gpio_pinset_t a_set;
 		w_set = GPIO_PIN27 | GPIO_PORT1 | GPIO_OUTPUT | IOMUX_GOUT;
 		ret = imxrt_config_gpio(w_set); //GPIO_1_20 - WRITE
+		a_set = GPIO_PIN28 | GPIO_PORT1 | GPIO_OUTPUT | IOMUX_GOUT;
+		ret = imxrt_config_gpio(a_set); //GPIO_1_20 - WRITE
 		dbg("config fail for port_1_pin_20, write.\n");
 		if (ret != OK) {
 			lldbg("config fail for port_1_pin_20, write.\n");

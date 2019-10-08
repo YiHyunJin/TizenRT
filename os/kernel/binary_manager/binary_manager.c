@@ -33,6 +33,15 @@
 #include <tinyara/timer.h>
 
 #include "binary_manager.h"
+
+#include "../../arch/arm/src/imxrt/imxrt_gpio.h"
+#include "../../arch/arm/include/imxrt/imxrt102x_irq.h"
+#include "../../arch/arm/src/imxrt/chip/imxrt102x_pinmux.h"
+
+
+#define IOMUX_GOUT      (IOMUX_PULL_NONE | IOMUX_CMOS_OUTPUT | \
+                         IOMUX_DRIVE_40OHM | IOMUX_SPEED_MEDIUM | \
+                         IOMUX_SLEW_SLOW)
 int frt_fd;
 /****************************************************************************
  * Private Definitions
@@ -202,6 +211,10 @@ int binary_manager(int argc, char *argv[])
 	binmgr_request_t request_msg;
 	struct faultmsg_s *msg;
 
+	gpio_pinset_t w_set;
+	w_set = GPIO_PIN27 | GPIO_PORT1 | GPIO_OUTPUT | IOMUX_GOUT;
+	/* Get mqfd for sending recovery mesage to binary manager */
+
 	struct mq_attr attr;
 	attr.mq_maxmsg = BINMGR_MAX_MSG;
 	attr.mq_msgsize = sizeof(binmgr_request_t);
@@ -251,6 +264,8 @@ int binary_manager(int argc, char *argv[])
 #ifdef CONFIG_BINMGR_RECOVERY
 			if (errno == EAGAIN && !sq_empty(&fault_list)) {
 				//binary_manager_recovery(request_msg.requester_pid);
+				imxrt_gpio_write(w_set, true);
+				imxrt_gpio_write(w_set, false);
 				msg = (struct faultmsg_s *)sq_remfirst(&fault_list);
 				binary_manager_recovery(msg->faultid);
 				binmgr_free_faultmsg(msg);
@@ -278,6 +293,7 @@ int binary_manager(int argc, char *argv[])
 			loading_data[0] = itoa(LOADCMD_RELOAD, type_str, 10);
 			loading_data[1] = (char *)request_msg.data.bin_name;
 			loading_data[2] = NULL;
+
 			ret = binary_manager_loading(loading_data);
 			break;
 		case BINMGR_NOTIFY_STARTED:

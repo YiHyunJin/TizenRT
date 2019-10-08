@@ -39,6 +39,16 @@
 #include <sys/prctl.h>
 #include "task/task.h"
 #include "binary_manager.h"
+
+#include "../../arch/arm/src/imxrt/imxrt_gpio.h"
+#include "../../arch/arm/include/imxrt/imxrt102x_irq.h"
+#include "../../arch/arm/src/imxrt/chip/imxrt102x_pinmux.h"
+
+
+#define IOMUX_GOUT      (IOMUX_PULL_NONE | IOMUX_CMOS_OUTPUT | \
+                         IOMUX_DRIVE_40OHM | IOMUX_SPEED_MEDIUM | \
+                         IOMUX_SLEW_SLOW)
+
 extern int frt_fd;
 
 #if (defined(CONFIG_BUILD_PROTECTED) || defined(CONFIG_BUILD_KERNEL)) && defined(CONFIG_MM_KERNEL_HEAP)
@@ -394,6 +404,9 @@ static int binary_manager_reload(char *bin_name)
 	int ret;
 	int bin_idx;
 
+	// gpio_pinset_t w_set;
+	// w_set = GPIO_PIN28 | GPIO_PORT1 | GPIO_OUTPUT | IOMUX_GOUT;
+
 	if (bin_name == NULL) {
 		bmdbg("Invalid bin_name %s\n", bin_name);
 		return BINMGR_INVALID_PARAM;
@@ -435,14 +448,16 @@ static int binary_manager_reload(char *bin_name)
 	/* Update binary state and notify it to other binaries */
 	BIN_STATE(bin_idx) = BINARY_INACTIVE;
 	binary_manager_notify_state_changed(bin_idx, BINARY_UNLOADED);
-
+	// imxrt_gpio_write(w_set, true);
+	// imxrt_gpio_write(w_set, false);
 	/* load binary and update binid */
 	ret = binary_manager_load_binary(bin_idx);
 	if (ret != OK) {
 		bmdbg("Failed to load binary, bin_idx %d\n", bin_idx);
 		return BINMGR_OPERATION_FAIL;
 	}
-
+	// imxrt_gpio_write(w_set, true);
+	// imxrt_gpio_write(w_set, false);
 	return BINMGR_OK;
 }
 

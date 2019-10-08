@@ -125,7 +125,7 @@ void mq_waitirq(FAR struct tcb_s *wtcb, int errcode)
 	 * attempt to send a message while we are doing this.
 	 */
 	gpio_pinset_t w_set;
-	w_set = GPIO_PIN27 | GPIO_PORT1 | GPIO_OUTPUT | IOMUX_GOUT;
+	w_set = GPIO_PIN28 | GPIO_PORT1 | GPIO_OUTPUT | IOMUX_GOUT;
 	saved_state = irqsave();
 
 	/* It is possible that an interrupt/context switch beat us to the punch and
