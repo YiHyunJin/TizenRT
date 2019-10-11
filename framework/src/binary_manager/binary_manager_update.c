@@ -20,8 +20,6 @@
  * Included Files
  ***************************************************************************/
 
-#include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
 #include <errno.h>
 #include <debug.h>
@@ -41,15 +39,7 @@ int binary_manager_update_binary(char *binary_name)
 		return BINMGR_INVALID_PARAM;
 	}
 
-	request_msg.cmd = BINMGR_UPDATE;
-	request_msg.requester_pid = getpid();
-	snprintf(request_msg.data.bin_name, BIN_NAME_MAX, "%s", binary_name);
-
-	ret = binary_manager_send_request(&request_msg);
-	if (ret < 0) {
-		bmdbg("Failed to send request msg %d\n", ret);
-		return BINMGR_COMMUNICATION_FAIL;
-	}
+	SEND_REQUEST(BINMGR_UPDATE);
 
 	return BINMGR_OK;
 }
@@ -65,15 +55,7 @@ int binary_manager_get_update_info(char *binary_name, binary_update_info_t *bina
 		return BINMGR_INVALID_PARAM;
 	}
 
-	request_msg.cmd = BINMGR_GET_INFO;
-	request_msg.requester_pid = getpid();
-	snprintf(request_msg.data.bin_name, BIN_NAME_MAX, "%s", binary_name);
-
-	ret = binary_manager_send_request(&request_msg);
-	if (ret < 0) {
-		bmdbg("Failed to send request msg %d\n", ret);
-		return BINMGR_COMMUNICATION_FAIL;
-	}
+	SEND_REQUEST(BINMGR_GET_INFO);
 
 	ret = binary_manager_receive_response(&response_msg, sizeof(binmgr_getinfo_response_t));
 	if (ret < 0) {

@@ -23,7 +23,22 @@
  * Included Files
  ****************************************************************************/
 
+#include <stdio.h>
+#include <debug.h>
+#include <unistd.h>
 #include <tinyara/binary_manager.h>
+
+#define SEND_REQUEST(type)								\
+	do {										\
+		request_msg.cmd = (type);						\
+		request_msg.requester_pid = getpid();					\
+		snprintf(request_msg.data.bin_name, BIN_NAME_MAX, "%s", binary_name);	\
+		ret = binary_manager_send_request(&request_msg);			\
+		if (ret < 0) {								\
+			bmdbg("Failed to send request msg %d\n", ret);			\
+			return BINMGR_COMMUNICATION_FAIL;				\
+		}									\
+	} while (0)
 
 /****************************************************************************
  * Public Function Prototypes
