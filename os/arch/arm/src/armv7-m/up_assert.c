@@ -447,19 +447,17 @@ static void _up_assert(int errorcode)
 #endif /* CONFIG_BOARD_ASSERT_AUTORESET */
 }
  
-static void recovery_exclude_scheduling_highprio(FAR struct tcb_s *tcb, FAR void *arg)
+static void recovery_exclude_scheduling_highprio(int pid)
 {
-	irqstate_t flags;
-	struct fault_data *msg = (struct fault_data *)arg;
-
-	if (tcb->group->tg_loadtask == msg->binid && tcb->pid != msg->faultid) {
-		/* Recover semaphores, message queue, and watchdog timer resources.*/
+	struct tcb_s *tcb = sched_gettcb(pid);
+	/* Recover semaphores, message queue, and watchdog timer resources.*/
+	if (tcb->sched_priority > 200){
 		task_recover(tcb);
-
+		// lldbg("hello!!\n");
 		/* Remove the TCB from the task list associated with the state */
 		dq_rem((FAR dq_entry_t *)tcb, (dq_queue_t *)g_tasklisttable[tcb->task_state].list);
-		sched_addblocked(tcb, TSTATE_TASK_INACTIVE);
-		//bmllvdbg("Remove pid %d from task list\n", tcb->pid);
+		dq_addlast((FAR dq_entry_t *)tcb, (FAR dq_queue_t *)g_tasklisttable[TSTATE_TASK_INACTIVE].list);
+		tcb->task_state = TSTATE_TASK_INACTIVE;
 	}
 }
 
@@ -473,10 +471,13 @@ static void recovery_user_assert(void)
 	mqd_t mqfd;
 	irqstate_t flags;
 	binmgr_request_t request_msg;
+	struct tcb_s *ntcb;
 	struct tcb_s *tcb;
 	uint32_t time_diff;
 	struct faultmsg_s *msg;
-	struct fault_data data;
+	int faultid;
+	int binid;
+	// struct pidhash_s *hash_list = NULL;
 
 	gpio_pinset_t w_set;
 	w_set = GPIO_PIN28 | GPIO_PORT1 | GPIO_OUTPUT | IOMUX_GOUT;
@@ -499,17 +500,32 @@ static void recovery_user_assert(void)
 	if (tcb != NULL && tcb->group != NULL && tcb->group->tg_loadtask > 0) {
 		if (tcb->group->tg_rtflag == 1) {
 			if (current_regs) {
-				sched_removereadytorun(tcb);
-#if CONFIG_RR_INTERVAL > 0
-				tcb->timeslice = 0;
-#endif
-				tcb->sched_priority = SCHED_PRIORITY_MIN;
-				sched_addreadytorun(tcb);
+				ntcb = (FAR struct tcb_s *)tcb->flink;
+				ntcb->task_state = TSTATE_TASK_RUNNING;
+				current_regs = ntcb->xcp.regs;
+				binid = tcb->group->tg_loadtask;
+				faultid = tcb->pid;
+				dq_rem((FAR dq_entry_t *)tcb, (dq_queue_t *)g_tasklisttable[tcb->task_state].list);
+				dq_addlast((FAR dq_entry_t *)tcb, (FAR dq_queue_t *)g_tasklisttable[TSTATE_TASK_INACTIVE].list);
+				// dq_rem((FAR dq_entry_t *)&g_pidhash[tcb->pid], &micom_que);
+				tcb->task_state = TSTATE_TASK_INACTIVE;
+// 				sched_removereadytorun(tcb);
+// 				dq_rem((FAR dq_entry_t *)tcb, (dq_queue_t *)g_tasklisttable[tcb->task_state].list);
+// #if CONFIG_RR_INTERVAL > 0
+// 				tcb->timeslice = 0;
+// #endif
+// 				tcb->sched_priority = SCHED_PRIORITY_MIN;
+// 				sched_addreadytorun(tcb);
 			}
 			//flags = irqsave();
-			data.binid = tcb->group->tg_loadtask;
-			data.faultid = tcb->pid;
-			sched_foreach(recovery_exclude_scheduling_highprio, (FAR void *)&data);
+			//for (hash_list = (struct pidhash_s *)micom_que.head; hash_list != NULL; hash_list = hash_list->flink) {
+			for (int i = 0; i < CONFIG_MAX_TASKS; ++i) {
+				if (g_pidhash[i].bin_id == binid && g_pidhash[i].pid != faultid) {
+					recovery_exclude_scheduling_highprio(g_pidhash[i].pid);
+				}
+			}
+			//}
+			//sched_foreach(recovery_exclude_scheduling_highprio, (FAR void *)&data);
 
 			//irqrestore(flags);
 		} else {
@@ -523,6 +539,8 @@ static void recovery_user_assert(void)
 			msg->faultid = tcb->pid;
 			
 			sq_addlast((sq_entry_t *)msg, (sq_queue_t *)&fault_list);
+			imxrt_gpio_write(w_set, true);
+			imxrt_gpio_write(w_set, false);
 			mq_waitirq(binmgr_tcb, EAGAIN);
 			imxrt_gpio_write(w_set, true);
 			imxrt_gpio_write(w_set, false);
@@ -629,7 +647,7 @@ void up_assert(const uint8_t *filename, int lineno)
 	}
 #endif  /* CONFIG_BINMGR_RECOVERY */
 
-	//up_dumpstate();
+	up_dumpstate();
 
 #ifdef CONFIG_BINMGR_RECOVERY
 	if (is_kernel_assert == false) {

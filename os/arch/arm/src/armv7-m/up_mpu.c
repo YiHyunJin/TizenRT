@@ -292,8 +292,8 @@ uint32_t mpu_subregion(uintptr_t base, size_t size, uint8_t l2size)
 	offset = base & mask;
 
 	/* Calculate the mask need to handle disabled subregions at the end of the
-	 * region
-	 */
+	* region
+	*/
 
 	ret = mpu_subregion_ms(size + offset, l2size);
 
@@ -323,10 +323,10 @@ void mpu_user_extsram_context(uint32_t region, uintptr_t base, size_t size, uint
 	DEBUGASSERT(region < CONFIG_ARMV7M_MPU_NREGIONS);
 
 	/* Select the region */
-	regs[0] = region;
+	regs[0] = 0;
 
 	/* Select the region base address */
-	regs[1] = (base & MPU_RBAR_ADDR_MASK) | region;
+	regs[1] = (base & MPU_RBAR_ADDR_MASK) | 0;
 
 	/* Select the region size and the sub-region map */
 
@@ -344,5 +344,54 @@ void mpu_user_extsram_context(uint32_t region, uintptr_t base, size_t size, uint
 			MPU_RASR_C |                   /* Cacheable     */
 			MPU_RASR_AP_RWRW;              /* P:RW   U:RW   */
 	regs[2] = regval;
+	// lldbg("%lu %lu %ld\n", regs[0], regs[1], regs[2]);
+#if 1
+	regs[3] = 1;
+
+	/* Select the region base address */
+
+	regs[4] = ((base + size) & MPU_RBAR_ADDR_MASK) | 1;
+
+	/* Select the region size and the sub-region map */
+
+	l2size = mpu_log2regionceil((base + size), size);
+	subregions = mpu_subregion((base + size), size, l2size);
+
+	/* The configure the region */
+
+	regval = MPU_RASR_ENABLE |      /* Enable region */
+			MPU_RASR_SIZE_LOG2((uint32_t)l2size) | /* Region size   */
+			((uint32_t)subregions << MPU_RASR_SRD_SHIFT) | /* Sub-regions   */
+#ifdef CONFIG_APPS_RAM_REGION_SHAREABLE
+			MPU_RASR_S |                   /* Shareable     */
+#endif
+			MPU_RASR_C |                   /* Cacheable     */
+			MPU_RASR_AP_RWRW;              /* P:RW   U:RW   */
+	regs[5] = regval;
+#endif
+
+// 	lldbg("%lu %lu %ld\n", regs[3], regs[4], regs[5]);
+// 	regs[6] = 2;
+
+// 	/* Select the region base address */
+// 	regs[7] = (base & MPU_RBAR_ADDR_MASK) | 2;
+
+// 	/* Select the region size and the sub-region map */
+
+// 	l2size = mpu_log2regionceil(base, size);
+// 	subregions = mpu_subregion(base, size, l2size);
+
+// 	/* The configure the region */
+
+// 	regval = MPU_RASR_ENABLE |      /* Enable region */
+// 			MPU_RASR_SIZE_LOG2((uint32_t)l2size) | /* Region size   */
+// 			((uint32_t)subregions << MPU_RASR_SRD_SHIFT) | /* Sub-regions   */
+// #ifdef CONFIG_APPS_RAM_REGION_SHAREABLE
+// 			MPU_RASR_S |                   /* Shareable     */
+// #endif
+// 			MPU_RASR_C |                   /* Cacheable     */
+// 			MPU_RASR_AP_RWRW;              /* P:RW   U:RW   */
+// 	regs[8] = regval;
+// 	mpu_show_regioninfo();
 }
 #endif

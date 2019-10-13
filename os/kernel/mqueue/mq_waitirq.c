@@ -157,8 +157,6 @@ void mq_waitirq(FAR struct tcb_s *wtcb, int errcode)
 		wtcb->pterrno = errcode;
 
 		/* Restart the task. */
-		imxrt_gpio_write(w_set, true);
-		imxrt_gpio_write(w_set, false);
 		up_unblock_task(wtcb);
 	}
 

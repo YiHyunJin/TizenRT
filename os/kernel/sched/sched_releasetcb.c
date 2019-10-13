@@ -106,7 +106,10 @@ static void sched_releasepid(pid_t pid)
 
 	g_pidhash[hash_ndx].tcb = NULL;
 	g_pidhash[hash_ndx].pid = INVALID_PROCESS_ID;
-
+	g_pidhash[hash_ndx].bin_id = INVALID_PROCESS_ID;
+	// if (g_pidhash[hash_ndx].flink != NULL || g_pidhash[hash_ndx].blink != NULL) {
+	// 	dq_rem((FAR dq_entry_t *)&g_pidhash[hash_ndx], &micom_que);
+	// }
 #ifdef CONFIG_SCHED_CPULOAD
 	/* Decrement the total CPU load count held by this thread from total
 	 * for all threads and reset the load count on this defunct thread

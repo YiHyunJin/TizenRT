@@ -90,7 +90,7 @@
 #define REG_RNR		0
 #define REG_RBAR	1
 #define REG_RASR	2
-#define MPU_REGS	3
+#define MPU_REGS	6
 #endif
 /* Configuration ****************************************************************/
 /* Task groups currently only supported for retention of child status */

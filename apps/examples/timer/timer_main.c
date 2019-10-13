@@ -106,20 +106,20 @@ struct timer_args {
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
-int count;
-void handler(int signo)
-{
-	count--;
-	prctl(TC_GPIO_PIN20_FALSE, NULL);
-	//binary_manager_recovery(9);
-}
+// int count;
+// void handler(int signo)
+// {
+// 	count--;
+// 	prctl(TC_GPIO_PIN20_FALSE, NULL);
+// 	//binary_manager_recovery(9);
+// }
 
 static pthread_addr_t timer_thread(pthread_addr_t arg)
 {
 	struct timer_args *pargs = (struct timer_args *)arg;
 	struct timer_notify_s notify;
 	int ret;
-	count = pargs->count;
+	int count = pargs->count;
 	int intval = pargs->intval;
 	int fd = pargs->fd;
 #ifdef CONFIG_EXAMPLES_TIMER_FRT_MEASUREMENT
@@ -212,12 +212,11 @@ static pthread_addr_t timer_thread(pthread_addr_t arg)
 	}
 
 #endif
-	while (count > 0) {
-		// sigwaitinfo(&sig_set, NULL);
-		// sleep(10);
-		sched_yield();
+	while (count--) {
+		sigwaitinfo(&sig_set, NULL);
+		// // sleep(10);
+		// sched_yield();
 		prctl(TC_GPIO_PIN20_FALSE, NULL);
-		count--;
 	}
 #ifdef CONFIG_EXAMPLES_TIMER_FRT_MEASUREMENT
 	if (ioctl(frt_fd, TCIOC_GETSTATUS, (unsigned long)(uintptr_t)&after) < 0) {

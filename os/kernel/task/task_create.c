@@ -182,6 +182,13 @@ static int thread_create(FAR const char *name, uint8_t ttype, int priority, int 
 		goto errout_with_tcb;
 	}
 
+#ifdef CONFIG_BINARY_MANAGER
+	FAR struct tcb_s *rtcb = this_task();
+	/* Set main task id in a binary for recovery */
+	tcb->cmn.group->tg_loadtask = rtcb->group->tg_loadtask;
+	tcb->cmn.group->tg_rtflag = rtcb->group->tg_rtflag;
+#endif
+
 	/* Initialize the task control block */
 
 	ret = task_schedsetup(tcb, priority, task_start, entry, ttype);
@@ -214,13 +221,6 @@ static int thread_create(FAR const char *name, uint8_t ttype, int priority, int 
 	/* Get the assigned pid before we start the task */
 
 	pid = (int)tcb->cmn.pid;
-
-#ifdef CONFIG_BINARY_MANAGER
-	FAR struct tcb_s *rtcb = this_task();
-	/* Set main task id in a binary for recovery */
-	tcb->cmn.group->tg_loadtask = rtcb->group->tg_loadtask;
-	tcb->cmn.group->tg_rtflag = rtcb->group->tg_rtflag;
-#endif
 
 #ifdef CONFIG_HEAPINFO_USER_GROUP
 	heapinfo_check_group_list(pid, tcb->cmn.name);

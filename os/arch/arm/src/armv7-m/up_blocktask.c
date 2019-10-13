@@ -169,6 +169,7 @@ void up_block_task(struct tcb_s *tcb, tstate_t task_state)
 			/* Restore the MPU registers in case we are switching to an application task */
 #ifdef CONFIG_ARMV7M_MPU
 			up_set_mpu_app_configuration(rtcb);
+			//mpu_show_regioninfo();
 #endif
 #ifdef CONFIG_TASK_MONITOR
 			/* Update rtcb active flag for monitoring. */
@@ -202,3 +203,4 @@ void up_block_task(struct tcb_s *tcb, tstate_t task_state)
 		}
 	}
 }
+

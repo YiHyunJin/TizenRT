@@ -671,6 +671,13 @@ static inline void up_set_mpu_app_configuration(struct tcb_s *rtcb)
 		putreg32(rtcb->mpu_regs[REG_RNR], MPU_RNR);
 		putreg32(rtcb->mpu_regs[REG_RBAR], MPU_RBAR);
 		putreg32(rtcb->mpu_regs[REG_RASR], MPU_RASR);
+		putreg32(rtcb->mpu_regs[3], MPU_RNR);
+		putreg32(rtcb->mpu_regs[4], MPU_RBAR);
+		putreg32(rtcb->mpu_regs[5], MPU_RASR);
+
+		// putreg32(rtcb->mpu_regs[6], MPU_RNR);
+		// putreg32(rtcb->mpu_regs[7], MPU_RBAR);
+		// putreg32(rtcb->mpu_regs[8], MPU_RASR);
 	}
 }
 #else

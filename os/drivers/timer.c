@@ -167,26 +167,26 @@ static bool timer_notifier(FAR uint32_t *next_interval_us, FAR void *arg)
 	gpio_pinset_t w_set;
 	w_set = GPIO_PIN27 | GPIO_PORT1 | GPIO_OUTPUT | IOMUX_GOUT;
 	imxrt_gpio_write(w_set, true);
-    irqstate_t saved_state;
-    struct tcb_s *tcb = sched_gettcb(upper->pid);
-    DEBUGASSERT(tcb != NULL);
+    // irqstate_t saved_state;
+    // struct tcb_s *tcb = sched_gettcb(upper->pid);
+    // DEBUGASSERT(tcb != NULL);
 
-    saved_state = irqsave();
-    if (tcb->task_state == TSTATE_TASK_INACTIVE) {
-        if (tcb->irq_data == NULL) {
-            tcb->irq_data = upper->arg;
-        }
+    // saved_state = irqsave();
+    // if (tcb->task_state == TSTATE_TASK_INACTIVE) {
+    //     if (tcb->irq_data == NULL) {
+    //         tcb->irq_data = upper->arg;
+    //     }
 
-        up_unblock_task(tcb);
-    }
-    irqrestore(saved_state);
+    //     up_unblock_task(tcb);
+    // }
+    // irqrestore(saved_state);
 
-// #ifdef CONFIG_CAN_PASS_STRUCTS
-// 	value.sival_ptr = upper->arg;
-// 	(void)sigqueue(upper->pid, upper->signo, value);
-// #else
-// 	(void)sigqueue(upper->pid, upper->signo, upper->arg);
-// #endif
+#ifdef CONFIG_CAN_PASS_STRUCTS
+	value.sival_ptr = upper->arg;
+	(void)sigqueue(upper->pid, upper->signo, value);
+#else
+	(void)sigqueue(upper->pid, upper->signo, upper->arg);
+#endif
 
 	return true;
 }

@@ -171,6 +171,9 @@ static int task_assignpid(FAR struct tcb_s *tcb)
 
 			g_pidhash[hash_ndx].tcb = tcb;
 			g_pidhash[hash_ndx].pid = next_pid;
+			// if (tcb->group->tg_rtflag == 1) {
+			// 	dq_addlast((FAR dq_entry_t *)&g_pidhash[hash_ndx], &micom_que);
+			// }
 #ifdef CONFIG_SCHED_CPULOAD
 			int cpuload_idx;
 			for (cpuload_idx = 0; cpuload_idx < SCHED_NCPULOAD; cpuload_idx++) {
@@ -178,7 +181,6 @@ static int task_assignpid(FAR struct tcb_s *tcb)
 			}
 #endif
 			tcb->pid = next_pid;
-
 			/* Increment the task count */
 			g_alive_taskcount++;
 
@@ -464,6 +466,12 @@ static int thread_schedsetup(FAR struct tcb_s *tcb, int priority, start_t start,
 		tcb->mpu_regs[REG_RNR] = rtcb->mpu_regs[REG_RNR];
 		tcb->mpu_regs[REG_RBAR] = rtcb->mpu_regs[REG_RBAR];
 		tcb->mpu_regs[REG_RASR] = rtcb->mpu_regs[REG_RASR];
+		tcb->mpu_regs[3] = rtcb->mpu_regs[3];
+		tcb->mpu_regs[4] = rtcb->mpu_regs[4];
+		tcb->mpu_regs[5] = rtcb->mpu_regs[5];
+		// tcb->mpu_regs[6] = rtcb->mpu_regs[6];
+		// tcb->mpu_regs[7] = rtcb->mpu_regs[7];
+		// tcb->mpu_regs[8] = rtcb->mpu_regs[8];
 #endif
 
 #endif

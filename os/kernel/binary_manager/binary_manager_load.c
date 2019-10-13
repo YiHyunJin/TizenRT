@@ -509,7 +509,7 @@ int binary_manager_loading(char *loading_data[])
 {
 	int ret;
 
-	ret = kernel_thread(LOADINGTHD_NAME, LOADINGTHD_PRIORITY, LOADINGTHD_STACKSIZE, loading_thread, (char * const *)loading_data);
+	ret = kernel_thread(LOADINGTHD_NAME, 221, LOADINGTHD_STACKSIZE, loading_thread, (char * const *)loading_data);
 	if (ret > 0) {
 		bmvdbg("Execute loading thread with pid %d\n", ret);
 	} else {

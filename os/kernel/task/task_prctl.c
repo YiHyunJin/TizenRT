@@ -278,6 +278,7 @@ int prctl(int option, ...)
 	{
 		gpio_pinset_t w_set;
 		w_set = GPIO_PIN27 | GPIO_PORT1 | GPIO_OUTPUT | IOMUX_GOUT;
+		imxrt_gpio_write(w_set, true);
 		imxrt_gpio_write(w_set, false);
 	}
 	break;

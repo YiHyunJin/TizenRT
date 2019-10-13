@@ -260,6 +260,7 @@ int up_svcall(int irq, FAR void *context, FAR void *arg)
 		/* Restore the MPU registers in case we are switching to an application task */
 #ifdef CONFIG_ARMV7M_MPU
 		up_set_mpu_app_configuration(tcb);
+		//mpu_show_regioninfo();
 #endif
 #ifdef CONFIG_TASK_MONITOR
 		/* Update tcb active flag for monitoring. */
@@ -298,6 +299,7 @@ int up_svcall(int irq, FAR void *context, FAR void *arg)
 		/* Restore the MPU registers in case we are switching to an application task */
 #ifdef CONFIG_ARMV7M_MPU
 		up_set_mpu_app_configuration(tcb);
+		//mpu_show_regioninfo();
 #endif
 #ifdef CONFIG_TASK_MONITOR
 		/* Update tcb active flag for monitoring. */

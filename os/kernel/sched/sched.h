@@ -110,6 +110,9 @@
 struct pidhash_s {
 	FAR struct tcb_s *tcb;		/* TCB assigned to this PID */
 	pid_t pid;					/* The full PID value */
+	int bin_id;
+	// FAR struct pidhash_s *flink;		/* Doubly linked list */
+	// FAR struct pidhash_s *blink;
 #ifdef CONFIG_SCHED_CPULOAD
 	uint32_t ticks[SCHED_NCPULOAD];				/* Number of ticks on this thread */
 #endif
@@ -226,6 +229,7 @@ extern volatile pid_t g_lastpid;
  */
 
 extern struct pidhash_s g_pidhash[CONFIG_MAX_TASKS];
+// extern dq_queue_t micom_que;
 
 /* This is a table of task lists.  This table is indexed by the task state
  * enumeration type (tstate_t) and provides a pointer to the associated

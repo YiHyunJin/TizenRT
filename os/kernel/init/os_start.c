@@ -209,6 +209,8 @@ volatile pid_t g_lastpid;
 
 struct pidhash_s g_pidhash[CONFIG_MAX_TASKS];
 
+// dq_queue_t micom_que;
+
 /* This is a table of task lists.  This table is indexed by
  * the task state enumeration type (tstate_t) and provides
  * a pointer to the associated static task list (if there
@@ -308,15 +310,17 @@ void os_start(void)
 	 defined(CONFIG_MM_KERNEL_HEAP)
 	sq_init(&g_delayed_kfree);
 #endif
-
 	/* Initialize the logic that determine unique process IDs. */
 
 	g_lastpid = 0;
 	for (i = 0; i < CONFIG_MAX_TASKS; i++) {
 		g_pidhash[i].tcb = NULL;
 		g_pidhash[i].pid = INVALID_PROCESS_ID;
+		g_pidhash[i].bin_id = INVALID_PROCESS_ID;
+		// g_pidhash[i].flink = NULL;
+		// g_pidhash[i].blink = NULL;
 	}
-
+	// dq_init(&micom_que);
 	/* Assign the process ID of ZERO to the idle task */
 
 	g_pidhash[PIDHASH(0)].tcb = &g_idletcb.cmn;
