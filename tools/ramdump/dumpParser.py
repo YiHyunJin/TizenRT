@@ -705,9 +705,15 @@ def main():
 		fd = open("../../os/.config", 'r')
 		data = fd.read()
 
-		START_HEAP_POINT = 16
+		MM_SEM_SIZE = 4
+		MM_HOLDER_SIZE = 4
+		MM_COUNTS_HELD_SIZE = 4
+		MM_HEAPSIZE_SIZE = 4
+
 		HEPINFO_TCB_SIZE = 16
 		ALLOC_NODE_SIZE = 16
+
+		START_HEAP_POINT = MM_SEM_SIZE + MM_HOLDER_SIZE + MM_COUNTS_HELD_SIZE + MM_HEAPSIZE_SIZE
 
 		max_task = 0
 		if 'CONFIG_MAX_TASKS=' in data:
@@ -731,10 +737,10 @@ def main():
 		end_heap = rParser.read_word(g_mmheap + START_HEAP_POINT + 4)
 
 		point = start_heap + ALLOC_NODE_SIZE
-	
-		print "****************************************************"
-		print "  MemAddr |   Size   | Status |  Pid  |    Owner   |"
-		print "----------|----------|--------|-------|------------|"
+
+		print "******************************************************************"
+		print "  MemAddr |   Size   | Status |  Pid  |           Owner           "
+		print "----------|----------|--------|-------|---------------------------"
 		while point < end_heap:
 			size = rParser.read_word(point)
 			preceding = rParser.read_word(point + 4)
@@ -742,20 +748,47 @@ def main():
 			pid = rParser.read_halfword(point + 12)
 			if preceding & MM_ALLOC_BIT :
 				if pid >= 0 :
-					print '{:^10}|'.format(hex(point)), '{:>6}'.format(size), '  |', '{:^7}|'.format('Alloc'), '{:^6}|'.format(pid), '{:^11}|'.format(hex(owner))
+					cmd = ['addr2line', '-e', '../../build/output/bin/tinyara', hex(owner)]
+					fd_popen = subprocess.Popen(cmd, stdout=subprocess.PIPE).stdout
+					data = fd_popen.read()
+					print '{:^10}|'.format(hex(point)), '{:>6}'.format(size), '  |', '{:^7}|'.format('Alloc'), '{:^6}|'.format(pid), data[14:],
 				else :
-					print '{:^10}|'.format(hex(point)), '{:>6}'.format(size), '  |', '{:^7}|'.format('Alloc'), '{:^6}|'.format(-pid), '{:^11}|'.format(hex(owner))
+					cmd = ['addr2line', '-e', '../../build/output/bin/tinyara', hex(owner)]
+					fd_popen = subprocess.Popen(cmd, stdout=subprocess.PIPE).stdout
+					data = fd_popen.read()
+					print '{:^10}|'.format(hex(point)), '{:>6}'.format(size), '  |', '{:^7}|'.format('Alloc'), '{:^6}|'.format(-pid), data[14:],
 			else :
-				print '{:^10}|'.format(hex(point)), '{:>6}'.format(size), '  |', '{:^7}|'.format('Free'), '{:6}|'.format(""), '{:11}|'.format("")
+				print '{:^10}|'.format(hex(point)), '{:>6}'.format(size), '  |', '{:^7}|'.format('Free'), '{:6}|'.format("")
+			# next allock node
 			point = point + size
 
-		print "**************************************************************"
-		print "     Summary of Heap Usages (Size in Bytes)"
-		print "**************************************************************"
-		print 'HEAP SIZE        : ', rParser.read_word(g_mmheap + 12) 
-		print 'PICK ALLOC SiZE  : ', rParser.read_word(g_mmheap + 16)
-		print 'TOTAL ALLOC SIZE : ', rParser.read_word(g_mmheap + 20)
+		print ''
+		print "**********************************************"
+		print "   Summary of Heap Usages (Size in Bytes)"
+		print "**********************************************"
 
+		heap_size = rParser.read_word(g_mmheap + 12)
+		print 'HEAP SIZE        : ', heap_size
+		print 'PEAK ALLOC SIZE  : ', rParser.read_word(g_mmheap + 16)
+
+		total_alloc_size = rParser.read_word(g_mmheap + 20)
+		print 'TOTAL ALLOC SIZE : ', total_alloc_size
+		print 'FREE SIZE        : ', heap_size - total_alloc_size
+		print ''
+		print "***********************************************"
+		print "  PID  |   CUR ALLOC SIZE   | PEAK ALLOC SIZE |"
+		print "-------|--------------------|-----------------|"
+		NOT_PID = 0xFFFFFFFF
+	
+		alloc_list = g_mmheap + 24
+		for i in range(0, max_task) :
+			pid = rParser.read_word(alloc_list)
+			if pid != NOT_PID :
+				cur_alloc = rParser.read_word(alloc_list + 4)
+				peak_alloc = rParser.read_word(alloc_list + 8)
+				print '{:^7}|'.format(pid), "{:>14}".format(cur_alloc), '    |', '{:>13}'.format(peak_alloc), '  |'
+			alloc_list += HEPINFO_TCB_SIZE
+ 
 	except Exception, e:
 		print "ERROR:", e
 
