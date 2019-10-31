@@ -320,7 +320,7 @@ class dumpParser:
 	def read_halfword(self, address, debug=False):
 		if debug:
 			print('reading {0:x}'.format(address))
-		s = self.read_string(address, '<H', debug)
+		s = self.read_string(address, '<h', debug)
 		if s is None:
 			if debug:
 				print 'read_halfword s is None'
@@ -442,14 +442,7 @@ class dumpParser:
 			else:
 				symname, offset = r # Update both symbol name and offset
 
-			address = '{0:x}'.format(frame.pc)
-			cmd = ['addr2line', '-e', self.elf, address]
-			fd_popen = subprocess.Popen(cmd, stdout=subprocess.PIPE).stdout
-			data = fd_popen.read()
-			temp = data.split('/')[-1]
-			line = temp.split(':')[-1].rstrip()
-			name = temp[:-len(line)-2]
-			pstring = (extra_str + '[<{0:x}>] {1}+0x{2:x} [Line {3} of {4}]'.format(frame.pc, symname, offset, line, name))
+			pstring = (extra_str + '[<{0:x}>] {1}+0x{2:x}'.format(frame.pc, symname, offset))
 
 			if output_file:
 				out_file.write(pstring + '\n')
@@ -471,7 +464,7 @@ class dumpParser:
 		frame.pc = pc
 		self.stacksize = ss
 		self.find_stackframe_using_framepointer(frame)
-
+		
 def usage():
 	print '*************************************************************'
 	print '\nUsage: %s -e ELF_FILE -r DUMP_FILE [OPTIONS]' % sys.argv[0]
@@ -625,7 +618,6 @@ def main():
 		global g_stext
 		g_stext = rParser.get_address_of_symbol("_stext")
 		global g_etext
-		g_etext = rParser.get_address_of_symbol("_etext")
 
 		# If the log file is given, then parse that log file only and exit
 		if log_file is not None:
@@ -701,6 +693,68 @@ def main():
 		print ''
 		print '&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&'
 
+
+		print ''
+		print ''
+		print 'Details of Heap Usages (Size in Bytes)'
+		print ''
+
+		g_mmheap = rParser.get_address_of_symbol("g_mmheap")
+
+		# Read config informaiton
+		fd = open("../../os/.config", 'r')
+		data = fd.read()
+
+		START_HEAP_POINT = 16
+		HEPINFO_TCB_SIZE = 16
+		ALLOC_NODE_SIZE = 16
+
+		max_task = 0
+		if 'CONFIG_MAX_TASKS=' in data:
+			index = data.find('CONFIG_MAX_TASKS=')
+			index += len('CONFIG_MAX_TASKS=')
+			while data[index] != '\n' :
+				max_task *= 10
+				max_task += int(data[index])
+				index += 1
+
+		if 'CONFIG_DEBUG_MM_HEAPINFO=y' in data:
+			START_HEAP_POINT += 8
+			START_HEAP_POINT += (max_task * HEPINFO_TCB_SIZE)
+			
+		if 'CONFIG_MM_SMALL=y' in data:
+			MM_ALLOC_BIT = 0x8000
+		else :
+			MM_ALLOC_BIT = 0x80000000
+
+		start_heap = rParser.read_word(g_mmheap + START_HEAP_POINT)
+		end_heap = rParser.read_word(g_mmheap + START_HEAP_POINT + 4)
+
+		point = start_heap + ALLOC_NODE_SIZE
+	
+		print "****************************************************"
+		print "  MemAddr |   Size   | Status |  Pid  |    Owner   |"
+		print "----------|----------|--------|-------|------------|"
+		while point < end_heap:
+			size = rParser.read_word(point)
+			preceding = rParser.read_word(point + 4)
+			owner = rParser.read_word(point + 8)
+			pid = rParser.read_halfword(point + 12)
+			if preceding & MM_ALLOC_BIT :
+				if pid >= 0 :
+					print '{:^10}|'.format(hex(point)), '{:>6}'.format(size), '  |', '{:^7}|'.format('Alloc'), '{:^6}|'.format(pid), '{:^11}|'.format(hex(owner))
+				else :
+					print '{:^10}|'.format(hex(point)), '{:>6}'.format(size), '  |', '{:^7}|'.format('Alloc'), '{:^6}|'.format(-pid), '{:^11}|'.format(hex(owner))
+			else :
+				print '{:^10}|'.format(hex(point)), '{:>6}'.format(size), '  |', '{:^7}|'.format('Free'), '{:6}|'.format(""), '{:11}|'.format("")
+			point = point + size
+
+		print "**************************************************************"
+		print "     Summary of Heap Usages (Size in Bytes)"
+		print "**************************************************************"
+		print 'HEAP SIZE        : ', rParser.read_word(g_mmheap + 12) 
+		print 'PICK ALLOC SiZE  : ', rParser.read_word(g_mmheap + 16)
+		print 'TOTAL ALLOC SIZE : ', rParser.read_word(g_mmheap + 20)
 
 	except Exception, e:
 		print "ERROR:", e
