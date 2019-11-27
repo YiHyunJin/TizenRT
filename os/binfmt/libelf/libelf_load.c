@@ -89,8 +89,6 @@
 #define MIN(x, y) ((x) < (y) ? (x) : (y))
 #endif
 
-uint8_t mpu_log2regionceil(uintptr_t base, size_t size);
-
 /****************************************************************************
  * Private Constant Data
  ****************************************************************************/
@@ -157,11 +155,9 @@ static void elf_elfsize(struct elf_loadinfo_s *loadinfo)
 
 	/* Save the allocation size */
 #ifdef CONFIG_APP_BINARY_SEPARATION
-	loadinfo->textsize = 1 << mpu_log2regionceil(0, textsize);
-	loadinfo->rosize = 1 << mpu_log2regionceil(0, rosize);
-#else
-	loadinfo->textsize = textsize;
+	loadinfo->rosize = rosize;
 #endif
+	loadinfo->textsize = textsize;
 	loadinfo->datasize = datasize;
 
 }
@@ -247,6 +243,10 @@ static inline int elf_loadfile(FAR struct elf_loadinfo_s *loadinfo)
 		 */
 
 		else {
+#ifdef CONFIG_OPTIMIZE_APP_RELOAD
+			loadinfo->binp->bssstart = *pptr;
+			loadinfo->binp->bsssize = shdr->sh_size;
+#endif
 			memset(*pptr, 0, shdr->sh_size);
 		}
 

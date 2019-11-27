@@ -111,6 +111,13 @@ struct binary_s {
 	uint32_t ramsize;		/* Size of the RAM paritition */
 	uint32_t heapstart;		/* Start address of app heap area */
 #endif
+#ifdef CONFIG_OPTIMIZE_APP_RELOAD
+	uint32_t reload;		/* Indicate whether this binary will be reloaded */
+	uint32_t datastart;		/* Start address of data section */
+	uint32_t bssstart;		/* Start address of bss section */
+	size_t bsssize;			/* Size of bss section */
+	uint32_t data_backup;		/* Start address of copy of data section */
+#endif
 
 #if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_BUILD_KERNEL)
 	FAR char *argbuffer;		/* Allocated argument list */

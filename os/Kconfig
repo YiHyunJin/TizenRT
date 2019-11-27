@@ -270,6 +270,14 @@ config APPS_RAM_REGION_SHAREABLE
 		shareable region in the MPU. If the system has multiple cores which might access
 		the external applicaiton RAM region, then this config needs to be set to true.
 
+config OPTIMIZE_APP_RELOAD
+	bool "Optimizations for application reload"
+	default y
+	---help---
+		Optimize application reload by skipping reload of RO sections and making
+		copy of RW sections which will be directly replaced during reload. This option
+		avoids reading sections from flash memory during a reload.
+
 endif # APP_BINARY_SEPARATION
 
 

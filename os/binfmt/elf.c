@@ -310,6 +310,9 @@ static int elf_loadbinary(FAR struct binary_s *binp)
 	binp->rosize = loadinfo.rosize;
 	binp->datasize = loadinfo.datasize;
 #endif
+#ifdef CONFIG_OPTIMIZE_APP_RELOAD
+	binp->datastart = loadinfo.dataalloc;
+#endif
 
 #ifdef CONFIG_BINFMT_CONSTRUCTORS
 	/* Save information about constructors and destructors. */
