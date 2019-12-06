@@ -57,6 +57,7 @@
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
+#include <sys/prctl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
@@ -93,6 +94,12 @@
 #ifdef CONFIG_EXAMPLES_TIMER_FRT_MEASUREMENT
 #define ALLOWABLE_PERCENTAGE (0.1)
 #endif
+int count;
+// void handler(int signo)	
+// {
+// 	count--;
+// 	prctl(TC_GPIO_PIN20_FALSE);
+// }
 
 struct timer_args {
 	int fd;
@@ -110,9 +117,10 @@ static pthread_addr_t timer_thread(pthread_addr_t arg)
 {
 	struct timer_args *pargs = (struct timer_args *)arg;
 	struct timer_notify_s notify;
-	int count = pargs->count;
+	count = pargs->count;
 	int intval = pargs->intval;
 	int fd = pargs->fd;
+	int ret;
 #ifdef CONFIG_EXAMPLES_TIMER_FRT_MEASUREMENT
 	int frt_fd;
 	char path[_POSIX_PATH_MAX];
@@ -128,6 +136,17 @@ static pthread_addr_t timer_thread(pthread_addr_t arg)
 	sigaddset(&sig_set, EXAMPLE_TIMER_SIGNO);
 
 	pthread_sigmask(SIG_BLOCK, &sig_set, NULL);
+
+	// struct sigaction act;
+
+	// act.sa_handler = (_sa_handler_t)handler;
+	// act.sa_flags = 0;
+	// ret = sigaction(EXAMPLE_TIMER_SIGNO, &act, NULL);
+	// if (ret == (int)SIG_ERR) {
+	// 	printf("sigaction Failed\n");
+	// 	return NULL;
+	// }
+
 
 	/*
 	 * Register a callback for notifications using the configured signal.
@@ -193,8 +212,10 @@ static pthread_addr_t timer_thread(pthread_addr_t arg)
 	}
 
 #endif
-	while (count--) {
-		sigwaitinfo(&sig_set, NULL);
+	while (count-- >= 0) {
+		// sigwaitinfo(&sig_set, NULL);
+		sched_yield();
+		prctl(TC_GPIO_PIN20_FALSE);
 	}
 #ifdef CONFIG_EXAMPLES_TIMER_FRT_MEASUREMENT
 	if (ioctl(frt_fd, TCIOC_GETSTATUS, (unsigned long)(uintptr_t)&after) < 0) {
@@ -379,3 +400,4 @@ int timer_example_main(int argc, char *argv[])
 
 	return EXIT_SUCCESS;
 }
+

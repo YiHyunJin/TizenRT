@@ -20,6 +20,7 @@
  * Included Files
  ****************************************************************************/
 #include <tinyara/config.h>
+#include <sys/prctl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -61,7 +62,7 @@ int wifiapp_main(int argc, char **argv)
 #if defined(CONFIG_SYSTEM_PREAPP_INIT) && defined(CONFIG_APP_BINARY_SEPARATION)
 	preapp_start(argc, argv);
 #endif
-
+	prctl(TC_GPIO_PIN20_CONFIG);
 	printf("This is WIFI App\n");
 
 #ifndef CONFIG_EXAMPLES_MICOM_TIMER_TEST

@@ -73,6 +73,16 @@
 #include <tinyara/kmalloc.h>
 #include <tinyara/timer.h>
 
+#include "../arch/arm/src/imxrt/imxrt_gpio.h"
+#include "../arch/arm/src/imxrt/imxrt_iomuxc.h"
+#include "../arch/arm/include/imxrt/imxrt102x_irq.h"
+#include "../arch/arm/src/imxrt/chip/imxrt102x_pinmux.h"
+
+
+#define IOMUX_GOUT      (IOMUX_PULL_NONE | IOMUX_CMOS_OUTPUT | \
+                         IOMUX_DRIVE_40OHM | IOMUX_SPEED_MEDIUM | \
+                         IOMUX_SLEW_SLOW)
+
 #ifdef CONFIG_TIMER
 
 /****************************************************************************
@@ -146,6 +156,9 @@ static const struct file_operations g_timerops = {
 
 static bool timer_notifier(FAR uint32_t *next_interval_us, FAR void *arg)
 {
+	gpio_pinset_t w_set;
+	w_set = GPIO_PIN28 | GPIO_PORT1 | GPIO_OUTPUT | IOMUX_GOUT;
+	imxrt_gpio_write(w_set, true);
 	FAR struct timer_upperhalf_s *upper = (FAR struct timer_upperhalf_s *)arg;
 #ifdef CONFIG_CAN_PASS_STRUCTS
 	union sigval value;
@@ -155,12 +168,26 @@ static bool timer_notifier(FAR uint32_t *next_interval_us, FAR void *arg)
 
 	/* Signal the waiter.. if there is one */
 
-#ifdef CONFIG_CAN_PASS_STRUCTS
-	value.sival_ptr = upper->arg;
-	(void)sigqueue(upper->pid, upper->signo, value);
-#else
-	(void)sigqueue(upper->pid, upper->signo, upper->arg);
-#endif
+    irqstate_t saved_state;
+    struct tcb_s *tcb = sched_gettcb(upper->pid);
+    DEBUGASSERT(tcb != NULL);
+
+    saved_state = irqsave();
+    if (tcb->task_state == TSTATE_TASK_INACTIVE) {
+        // if (tcb->irq_data == NULL) {
+        //     tcb->irq_data = upper->arg;
+        // }
+		imxrt_gpio_write(w_set, true);
+        up_unblock_task(tcb);
+    }
+    irqrestore(saved_state);
+
+// #ifdef CONFIG_CAN_PASS_STRUCTS
+// 	value.sival_ptr = upper->arg;
+// 	(void)sigqueue(upper->pid, upper->signo, value);
+// #else
+// 	(void)sigqueue(upper->pid, upper->signo, upper->arg);
+// #endif
 
 	return true;
 }
