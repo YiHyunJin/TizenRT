@@ -18,8 +18,16 @@
 
 -include $(TOPDIR)/Make.defs
 DELIM ?= $(strip /)
+
+LZMA ?= 1
 LZMA_PATH ?= ../../external/lzma
 LZMA_SRCDIR ?= lzma
+
+MINIZ ?= 2
+MINIZ_PATH ?= ../../external/miniz
+MINIZ_SRCDIR ?= miniz
+
+CFLAGS += -DLZMA=1 -DMINIZ=2
 
 ifeq ($(WINTOOL),y)
 INCDIROPT = -w
@@ -31,9 +39,13 @@ COMPRESSION_ASRCS  =
 COMPRESSION_CSRCS  += compress_read.c
 
 ifeq ($(CONFIG_BUILD_PROTECTED),y)
-ifeq ($(CONFIG_COMPRESSION_TYPE),1)
+ifeq ($(CONFIG_COMPRESSION_TYPE),$(LZMA))
 CFLAGS += -D_7ZIP_ST
 COMPRESSION_CSRCS += $(wildcard ./$(LZMA_SRCDIR)/*.c)
+else
+ifeq ($(CONFIG_COMPRESSION_TYPE),$(MINIZ))
+COMPRESSION_CSRCS += $(wildcard ./$(MINIZ_SRCDIR)/*.c)
+endif
 endif
 endif
 
@@ -54,10 +66,16 @@ all: init $(BIN)
 
 init:
 ifeq ($(CONFIG_BUILD_PROTECTED),y)
-ifeq ($(CONFIG_COMPRESSION_TYPE),1)
+ifeq ($(CONFIG_COMPRESSION_TYPE),$(LZMA))
 	@mkdir -p $(LZMA_SRCDIR)$(DELIM)
 	@cp $(LZMA_PATH)$(DELIM)*.c $(LZMA_SRCDIR)$(DELIM)
 	@cp $(LZMA_PATH)$(DELIM)*.h $(LZMA_SRCDIR)$(DELIM)
+else
+ifeq ($(CONFIG_COMPRESSION_TYPE),$(MINIZ))
+	@mkdir -p $(MINIZ_SRCDIR)$(DELIM)
+	@cp $(MINIZ_PATH)$(DELIM)*.c $(MINIZ_SRCDIR)$(DELIM)
+	@cp $(MINIZ_PATH)$(DELIM)*.h $(MINIZ_SRCDIR)$(DELIM)
+endif
 endif
 endif
 
@@ -80,6 +98,7 @@ clean:
 	$(call DELFILE, $(BIN))
 	$(call CLEAN)
 	$(call DELDIR, $(LZMA_SRCDIR))
+	$(call DELDIR, $(MINIZ_SRCDIR))
 
 distclean: clean
 	$(call DELFILE, Make.dep)

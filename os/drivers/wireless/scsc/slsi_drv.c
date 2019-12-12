@@ -37,7 +37,8 @@
 #include <tinyara/arch.h>
 #include <tinyara/fs/fs.h>
 #include <tinyara/sched.h>
-#include <tinyara/lwnl/lwnl80211.h>
+#include <net/if.h>
+#include <tinyara/lwnl/lwnl.h>
 #include <tinyara/lwnl/slsi_drv.h>
 
 #include <tinyara/wifi/slsi/slsi_wifi_api.h>

@@ -61,15 +61,16 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
-#include <net/lwip/netdb.h>
-#include <net/lwip/sockets.h>
+#include <net/if.h>
+#include "lwip/netdb.h"
+#include "lwip/sockets.h"
 #ifdef CONFIG_NET_IPv4
-#include <net/lwip/ip4_addr.h>
+#include "lwip/ip4_addr.h"
 #endif
 #ifdef CONFIG_NET_IPv6
-#include <net/lwip/ip6_addr.h>
+#include "lwip/ip6_addr.h"
 #endif
-#include <tinyara/lwnl/lwnl80211.h>
+#include <tinyara/lwnl/lwnl.h>
 
 /*
  * Private
@@ -80,7 +81,7 @@ int _create_netlink(int type, int protocol)
 	(void)type;
 	(void)protocol;
 
-	int fd = open(LWNL80211_PATH, O_RDWR);
+	int fd = open(LWNL_PATH, O_RDWR);
 	if (fd < 0) {
 		ndbg("open netlink dev fail\n");
 		return -1;

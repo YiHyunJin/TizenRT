@@ -64,7 +64,8 @@
 #endif
 
 #ifdef __TIZENRT__
-#include <tinyara/lwnl/lwnl80211.h>
+#include <net/if.h>
+#include <tinyara/lwnl/lwnl.h>
 #endif
 #include <coap/pdu.h>
 #include "caipinterface.h"
