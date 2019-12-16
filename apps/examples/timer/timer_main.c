@@ -129,13 +129,12 @@ static pthread_addr_t timer_thread(pthread_addr_t arg)
 	uint32_t time_diff;
 	uint32_t expected_time;
 #endif
-
 	sigset_t sig_set;
 	sigemptyset(&sig_set);
 	sigaddset(&sig_set, EXAMPLE_TIMER_SIGNO);
 
 	pthread_sigmask(SIG_BLOCK, &sig_set, NULL);
-
+	int INTERRUPT_COUNT = 0;
 	// struct sigaction act;
 
 	// act.sa_handler = (_sa_handler_t)handler;
@@ -145,7 +144,6 @@ static pthread_addr_t timer_thread(pthread_addr_t arg)
 	// 	printf("sigaction Failed\n");
 	// 	return NULL;
 	// }
-
 
 	/*
 	 * Register a callback for notifications using the configured signal.
@@ -200,21 +198,22 @@ static pthread_addr_t timer_thread(pthread_addr_t arg)
 		fprintf(stderr, "ERROR: Failed to set Free Run Timer: %d\n", errno);
 		goto error;
 	}
-	if (ioctl(frt_fd, TCIOC_START, TRUE) < 0) {
-		fprintf(stderr, "ERROR: Failed to start Free Run Timer: %d\n", errno);
-		goto error;
-	}
-
+	
 	if (ioctl(frt_fd, TCIOC_GETSTATUS, (unsigned long)(uintptr_t)&before) < 0) {
 		fprintf(stderr, "ERROR: Failed to get Free Run Timer status: %d\n", errno);
 		goto error;
 	}
 
+	if (ioctl(frt_fd, TCIOC_START, TRUE) < 0) {
+		fprintf(stderr, "ERROR: Failed to start Free Run Timer: %d\n", errno);
+		goto error;
+	}
+
 #endif
-	while (count-- >= 0) {
+	while (count-- > 0) {
 		// sigwaitinfo(&sig_set, NULL);
-		sched_yield();
-		//prctl(TC_GPIO_PIN20_FALSE);
+		INTERRUPT_COUNT = sched_yield(); 
+		// prctl(TC_GPIO_PIN20_FALSE);
 	}
 #ifdef CONFIG_EXAMPLES_TIMER_FRT_MEASUREMENT
 	if (ioctl(frt_fd, TCIOC_GETSTATUS, (unsigned long)(uintptr_t)&after) < 0) {
@@ -245,6 +244,7 @@ static pthread_addr_t timer_thread(pthread_addr_t arg)
 		fprintf(stdout, "\tFAIL : There are many missing timer interrupts.\n");
 	}
 #endif
+	printf("count = %d\n", INTERRUPT_COUNT);
 error:
 	pthread_sigmask(SIG_UNBLOCK, &sig_set, NULL);
 	pthread_exit(NULL);

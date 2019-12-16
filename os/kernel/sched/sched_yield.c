@@ -87,7 +87,6 @@
  * Assumptions:
  *
  ****************************************************************************/
-
 int sched_yield(void)
 {
 // #ifndef CONFIG_SCHED_YIELD_OPTIMIZATION
@@ -162,11 +161,30 @@ int sched_yield(void)
 
 // #endif							/* End of CONFIG_SCHED_YIELD_OPTIMIZATION */
 
+    int ret;
 	irqstate_t saved_state;
     struct tcb_s *tcb = sched_gettcb(getpid());
     DEBUGASSERT(tcb);
     saved_state = irqsave();
+    if(tcb->irq_data[0] != 0) {
+        ret = tcb->irq_data[0];
+        if (tcb->queueing == true) {
+            tcb->queueing = false;
+            tcb->irq_data[0] = tcb->irq_data[1];
+        } else {
+            tcb->irq_data[0] = 0;
+        }
+        irqrestore(saved_state);
+        return ret;
+    }
     up_block_task(tcb, TSTATE_TASK_INACTIVE);
+    ret = tcb->irq_data[0];
+    if (tcb->queueing == true) {
+        tcb->queueing = false;
+        tcb->irq_data[0] = tcb->irq_data[1];
+    } else {
+        tcb->irq_data[0] = 0;
+    }
     irqrestore(saved_state);
-    return (int)0;
+    return ret;
 }

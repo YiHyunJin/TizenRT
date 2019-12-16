@@ -85,6 +85,7 @@
 
 #ifdef CONFIG_TIMER
 
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -153,6 +154,7 @@ static const struct file_operations g_timerops = {
  * REVISIT: This function prototype is insufficient to support signaling
  *
  ****************************************************************************/
+unsigned int timer_intrrup_cnt;
 
 static bool timer_notifier(FAR uint32_t *next_interval_us, FAR void *arg)
 {
@@ -166,20 +168,22 @@ static bool timer_notifier(FAR uint32_t *next_interval_us, FAR void *arg)
 
 	DEBUGASSERT(upper != NULL);
 
+	timer_intrrup_cnt++;
 	/* Signal the waiter.. if there is one */
-
     irqstate_t saved_state;
     struct tcb_s *tcb = sched_gettcb(upper->pid);
     DEBUGASSERT(tcb != NULL);
 
     saved_state = irqsave();
-    if (tcb->task_state == TSTATE_TASK_INACTIVE) {
-        // if (tcb->irq_data == NULL) {
-        //     tcb->irq_data = upper->arg;
-        // }
-		// imxrt_gpio_write(w_set, true);
-        up_unblock_task(tcb);
-    }
+	if (tcb->irq_data[0] == 0) {
+		tcb->irq_data[0] = timer_intrrup_cnt;
+	} else if (tcb->queueing == false) {
+		tcb->queueing = true;
+		tcb->irq_data[1] = timer_intrrup_cnt;
+	}
+	if (tcb->task_state == TSTATE_TASK_INACTIVE) {
+		up_unblock_task(tcb);
+	}
     irqrestore(saved_state);
 
 // #ifdef CONFIG_CAN_PASS_STRUCTS

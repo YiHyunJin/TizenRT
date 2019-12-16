@@ -631,6 +631,8 @@ struct tcb_s {
 #ifdef CONFIG_TASK_MONITOR
 	bool is_active;
 #endif
+	bool queueing;
+	unsigned int irq_data[2]; 
 };
 
 /* struct task_tcb_s *************************************************************/

@@ -119,7 +119,7 @@ int wifiapp_main(int argc, char **argv)
 	// 	task_create("mqwait", 251, 1024, switch_test, (FAR char *const *)NULL);
 	// }
 	while (1) {
-		sleep(3);
+		sleep(100);
 	}
 	// printf("%lu\n", g_after.timeleft - g_before.timeleft);
 	return 0;

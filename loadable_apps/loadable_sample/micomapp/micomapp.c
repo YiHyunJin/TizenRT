@@ -39,7 +39,7 @@ int micomapp_main(int argc, char **argv)
 	int ret;
 
 	while (1) {
-		sleep(10);
+		sleep(100);
 	}
 
 	return 0;
