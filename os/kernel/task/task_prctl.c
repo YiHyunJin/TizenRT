@@ -369,6 +369,7 @@ int prctl(int option, ...)
 			lldbg("config fail for port_1_pin_20, write.\n");
 			return -1;
 		}
+		imxrt_gpio_write(w_set, false);
 	}
 	break;
 	case TC_GPIO_PIN20_TRUE:

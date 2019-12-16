@@ -156,9 +156,9 @@ static const struct file_operations g_timerops = {
 
 static bool timer_notifier(FAR uint32_t *next_interval_us, FAR void *arg)
 {
-	gpio_pinset_t w_set;
-	w_set = GPIO_PIN28 | GPIO_PORT1 | GPIO_OUTPUT | IOMUX_GOUT;
-	imxrt_gpio_write(w_set, true);
+	// gpio_pinset_t w_set;
+	// w_set = GPIO_PIN28 | GPIO_PORT1 | GPIO_OUTPUT | IOMUX_GOUT;
+	// imxrt_gpio_write(w_set, true);
 	FAR struct timer_upperhalf_s *upper = (FAR struct timer_upperhalf_s *)arg;
 #ifdef CONFIG_CAN_PASS_STRUCTS
 	union sigval value;
@@ -177,7 +177,7 @@ static bool timer_notifier(FAR uint32_t *next_interval_us, FAR void *arg)
         // if (tcb->irq_data == NULL) {
         //     tcb->irq_data = upper->arg;
         // }
-		imxrt_gpio_write(w_set, true);
+		// imxrt_gpio_write(w_set, true);
         up_unblock_task(tcb);
     }
     irqrestore(saved_state);

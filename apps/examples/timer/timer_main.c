@@ -94,7 +94,6 @@
 #ifdef CONFIG_EXAMPLES_TIMER_FRT_MEASUREMENT
 #define ALLOWABLE_PERCENTAGE (0.1)
 #endif
-int count;
 // void handler(int signo)	
 // {
 // 	count--;
@@ -117,7 +116,7 @@ static pthread_addr_t timer_thread(pthread_addr_t arg)
 {
 	struct timer_args *pargs = (struct timer_args *)arg;
 	struct timer_notify_s notify;
-	count = pargs->count;
+	int count = pargs->count;
 	int intval = pargs->intval;
 	int fd = pargs->fd;
 	int ret;
@@ -215,7 +214,7 @@ static pthread_addr_t timer_thread(pthread_addr_t arg)
 	while (count-- >= 0) {
 		// sigwaitinfo(&sig_set, NULL);
 		sched_yield();
-		prctl(TC_GPIO_PIN20_FALSE);
+		//prctl(TC_GPIO_PIN20_FALSE);
 	}
 #ifdef CONFIG_EXAMPLES_TIMER_FRT_MEASUREMENT
 	if (ioctl(frt_fd, TCIOC_GETSTATUS, (unsigned long)(uintptr_t)&after) < 0) {

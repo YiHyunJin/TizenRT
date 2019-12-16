@@ -20,11 +20,20 @@
  * Included Files
  ****************************************************************************/
 #include <tinyara/config.h>
+#include <sys/ioctl.h>
 #include <sys/prctl.h>
 #include <stdio.h>
+#include <fcntl.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <unistd.h>
+#include <errno.h>
+
+#include <tinyara/timer.h>
+#include <tinyara/clock.h>
+
+#define TIMER_DEVNAME  "/dev/timer%d"
+
 #ifdef CONFIG_BINARY_MANAGER
 #include <binary_manager/binary_manager.h>
 #endif
@@ -50,6 +59,34 @@ static void display_test_scenario(void)
 
 extern int preapp_start(int argc, char **argv);
 
+int g_count = 0;
+bool g_start =  false;
+bool g_end = false;
+int cnt = 0;
+int frt_fd;
+struct timer_status_s g_before;
+struct timer_status_s g_after;
+
+static void switch_test(int argc, char *argv[])
+{
+	usleep(1);
+	if (g_start == false) {
+		g_start = true;
+		if (ioctl(frt_fd, TCIOC_GETSTATUS, (unsigned long)(uintptr_t)&g_before) < 0) {
+			fprintf(stderr, "ERROR: Failed to get Free Run Timer status: %d\n", errno);
+		}
+	}
+	while(++g_count < 100000) {
+		sched_yield();
+	}
+	if(g_end == false){
+		g_end = true;
+		if (ioctl(frt_fd, TCIOC_GETSTATUS, (unsigned long)(uintptr_t)&g_after) < 0) {
+			fprintf(stderr, "ERROR: Failed to get Free Run Timer status: %d\n", errno);
+		}
+	}
+}
+
 #ifdef CONFIG_APP_BINARY_SEPARATION
 int main(int argc, char **argv)
 #else
@@ -58,64 +95,32 @@ int wifiapp_main(int argc, char **argv)
 {
 	char ch;
 	bool is_testing = true;
+	char path[_POSIX_PATH_MAX];
 
 #if defined(CONFIG_SYSTEM_PREAPP_INIT) && defined(CONFIG_APP_BINARY_SEPARATION)
 	preapp_start(argc, argv);
 #endif
-	prctl(TC_GPIO_PIN20_CONFIG);
-	printf("This is WIFI App\n");
 
-#ifndef CONFIG_EXAMPLES_MICOM_TIMER_TEST
-#ifdef CONFIG_BINARY_MANAGER
-	int ret;
-	ret = binary_manager_notify_binary_started();
-	if (ret < 0) {
-		printf("WIFI notify 'START' state FAIL\n");
-	}
-#endif
+	// prctl(TC_GPIO_PIN20_CONFIG);
+	// snprintf(path, _POSIX_PATH_MAX, TIMER_DEVNAME, 1);
 
-#ifndef CONFIG_ENABLE_RECOVERY_AGING_TEST
-	while (is_testing) {
-		display_test_scenario();
-		ch = getchar();
-		switch (ch) {
-#ifdef CONFIG_EXAMPLES_MESSAGING_TEST
-		case 'M':
-		case 'm':
-			messaging_test();
-			break;
-#endif
-#ifdef CONFIG_EXAMPLES_RECOVERY_TEST
-		case 'R':
-		case 'r':
-			recovery_test();
-			is_testing = false;
-			break;
-#endif
-#ifdef CONFIG_EXAMPLES_BINARY_UPDATE_TEST
-		case 'U':
-		case 'u':
-			binary_update_test();
-			break;
-#endif
-		case 'X':
-		case 'x':
-			printf("Test will be finished.\n");
-			is_testing = false;
-			break;
-		default:
-			printf("Invalid Scenario.\n");
-			break;
-		}
-	}
-#else
-	recovery_test();
-#endif
+	// frt_fd = open(path, O_RDONLY);
+	// if (frt_fd < 0) {
+	// 	fprintf(stderr, "ERROR: Failed to open Free Run Timer: %d\n", errno);
+	// }
+	// if (ioctl(frt_fd, TCIOC_SETFREERUN, TRUE) < 0) {
+	// 	fprintf(stderr, "ERROR: Failed to set Free Run Timer: %d\n", errno);
+	// }
+	// if (ioctl(frt_fd, TCIOC_START, TRUE) < 0) {
+	// 	fprintf(stderr, "ERROR: Failed to start Free Run Timer: %d\n", errno);
+	// }
 
-#endif /* CONFIG_EXAMPLES_MICOM_TIMER_TEST */
+	// for (int i = 0; i < 2; i++) {
+	// 	task_create("mqwait", 251, 1024, switch_test, (FAR char *const *)NULL);
+	// }
 	while (1) {
-		sleep(10);
-		printf("[%d] WIFI ALIVE\n", getpid());
+		sleep(3);
 	}
+	// printf("%lu\n", g_after.timeleft - g_before.timeleft);
 	return 0;
 }
