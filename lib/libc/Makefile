@@ -137,6 +137,9 @@ $(COBJS): $(BINDIR)$(DELIM)%$(OBJEXT): %.c
 
 $(BIN): $(OBJS)
 	$(call ARCHIVE, $@, $(OBJS))
+ifeq ($(CONFIG_LIB_ZONEINFO_ROMFS),y)
+	$(Q) $(MAKE) -C zoneinfo all TOPDIR=$(TOPDIR) BIN=$(BIN)
+endif
 
 # C library for the user phase of the two-pass kernel build
 
@@ -152,6 +155,13 @@ $(KBIN):
 	$(Q) $(MAKE) $(KBIN) BIN=$(KBIN) BINDIR=kbin TOPDIR=$(TOPDIR) EXTRADEFINES=$(EXTRADEFINES)
 endif
 
+# Context
+
+context:
+ifeq ($(CONFIG_LIB_ZONEINFO_ROMFS),y)
+	$(Q) $(MAKE) -C zoneinfo context TOPDIR=$(TOPDIR) BIN=$(BIN)
+endif
+
 # Dependencies
 
 .depend: Makefile $(SRCS)
@@ -160,6 +170,9 @@ ifeq ($(CONFIG_BUILD_PROTECTED),y)
 	$(Q) $(MKDEP) --obj-path kbin --obj-suffix $(OBJEXT) $(DEPPATH) "$(CC)" -- $(CFLAGS) $(KDEFINE) -- $(SRCS) >Make_kbin.dep
 else
 	$(Q) $(MKDEP) --obj-path bin --obj-suffix $(OBJEXT) $(DEPPATH) "$(CC)" -- $(CFLAGS) -- $(SRCS) >Make_bin.dep
+endif
+ifeq ($(CONFIG_LIB_ZONEINFO_ROMFS),y)
+	$(Q) $(MAKE) -C zoneinfo depend TOPDIR=$(TOPDIR) BIN=$(BIN)
 endif
 	$(Q) touch $@
 
@@ -182,6 +195,7 @@ distclean: clean
 	$(Q) $(MAKE) -C bin  distclean TOPDIR=$(TOPDIR)
 	$(Q) $(MAKE) -C ubin distclean TOPDIR=$(TOPDIR)
 	$(Q) $(MAKE) -C kbin distclean TOPDIR=$(TOPDIR)
+	$(Q) $(MAKE) -C zoneinfo distclean TOPDIR=$(TOPDIR) BIN=$(BIN)
 	$(call DELFILE, Make_bin.dep)
 	$(call DELFILE, Make_ubin.dep)
 	$(call DELFILE, Make_kbin.dep)

@@ -220,11 +220,6 @@ config LIBC_LOCALTIME
 	---help---
 		localtime API call support
 
-config TIME_EXTENDED
-	bool "enable time extended"
-	default "n"
-	depends on !LIBC_LOCALTIME
-
 if LIBC_LOCALTIME
 
 config LIBC_TZ_MAX_TIMES
@@ -239,7 +234,34 @@ config LIBC_TZDIR
 	string "zoneinfo directory path"
 	default "/etc/zoneinfo"
 
-endif
+config LIB_ZONEINFO
+	bool "TZ database"
+	default n
+	---help---
+		Download and build the TZ/Olson database.
+
+if LIB_ZONEINFO
+
+config LIB_ZONEINFO_ROMFS
+	bool "Build ROMFS filesystem"
+	default n
+	depends on FS_ROMFS
+	---help---
+		Build a mountable ROMFS filesystem containing the TZ/Olson database
+
+endif # LIB_ZONEINFO
+endif # LIBC_LOCALTIME
+
+config TIME_EXTENDED
+	bool "Add day of week, year support"
+	default "n"
+	depends on !LIBC_LOCALTIME
+	---help---
+		Selecting TIME_EXTENDED adds tm_wday, tm_yday and tm_isdst
+		to the tm struct. This allows integration with 3rd party libraries
+		that expect the tm struct to contain these members.
+
+		Note: tm_isdst is always 0
 
 config LIB_SENDFILE_BUFSIZE
 	int "sendfile() buffer size"
