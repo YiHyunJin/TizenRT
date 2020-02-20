@@ -189,6 +189,7 @@ struct tm {
 	int tm_wday;				/* day of the week (0-6) */
 	int tm_yday;				/* day of the year (0-365) */
 	int tm_isdst;				/* non-0 if daylight savings time is in effect */
+	char tm_name[4];
 #endif
 };
 
